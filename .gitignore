@@ -1,0 +1,47 @@
+# --- Secrets / environment ---
+.env
+*.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- Jupyter ---
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
+
+# --- ML artifacts: never commit raw third-party data or model weights ---
+ml/data/
+ml/data/*.csv
+*.ckpt
+*.pt
+*.bin
+*.safetensors
+*.gguf
+# model checkpoints / LoRA adapters
+checkpoints/
+adapters/
+
+# --- Node / Next.js ---
+node_modules/
+web/.next/
+web/out/
+web/build/
+npm-debug.log*
+yarn-error.log*
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Keep placeholder dirs
+!ml/figures/.gitkeep
+!docs/screenshots/.gitkeep
