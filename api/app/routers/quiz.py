@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.bkt import is_mastered, update_mastery
 from app.db import get_db
+from app.grading import offline_explain, offline_grade_and_classify
 from app.llm import get_llm_client
 from app.models import (
     Attempt,
@@ -126,8 +127,8 @@ def generate_quiz(
     return QuizOut(concept_id=concept_id, source="llm", questions=questions)
 
 
-def _reference_for(db: Session, question_id: int) -> tuple[str, object]:
-    """Return (prompt, reference_answer) for a question id, seeded or generated."""
+def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | None]:
+    """Return (prompt, reference_answer, target_misconception) for a question id."""
     if question_id < 0:
         cached = _reference_cache.get(question_id)
         if cached is None:
@@ -135,11 +136,12 @@ def _reference_for(db: Session, question_id: int) -> tuple[str, object]:
                 status_code=400,
                 detail="Generated question expired; regenerate the quiz",
             )
-        return cached["prompt"], cached["reference_answer"]
+        # Generated questions carry no pre-authored target misconception.
+        return cached["prompt"], cached["reference_answer"], None
     exercise = db.get(Exercise, question_id)
     if exercise is None:
         raise HTTPException(status_code=404, detail=f"Exercise {question_id} not found")
-    return exercise.prompt, exercise.correct_answer_json
+    return exercise.prompt, exercise.correct_answer_json, exercise.target_misconception
 
 
 @router.post("/{concept_id}/submit", response_model=QuizResultOut)
@@ -153,9 +155,14 @@ def submit_quiz(
 
     # Which concepts were already mastered, to compute what gets newly unlocked.
     before = compute_states(db, payload.student_id)
-    mastered_before = {cid for cid, info in before.items() if info["state"] == "mastered"}
 
-    client = get_llm_client()
+    # Use the LLM when configured; otherwise grade seeded answers deterministically
+    # so the demo runs with no API key (and stays deterministic for the video).
+    try:
+        client = get_llm_client()
+    except Exception as exc:  # noqa: BLE001 - no key / SDK -> offline grading
+        logger.info("No LLM client (%s); using offline grader", exc)
+        client = None
 
     # Load / create this student's mastery row for the concept.
     estimate = db.scalars(
@@ -172,27 +179,34 @@ def submit_quiz(
 
     graded: list[GradedAnswerOut] = []
     for ans in payload.answers:
-        prompt, reference = _reference_for(db, ans.question_id)
+        prompt, reference, target_misconception = _reference_for(db, ans.question_id)
         if ans.reference_answer is not None:
             reference = ans.reference_answer  # client-supplied override (generated qs)
 
-        result = client.grade_and_classify(
-            question=prompt, reference_answer=reference, student_answer=ans.response
-        )
+        if client is not None:
+            result = client.grade_and_classify(
+                question=prompt, reference_answer=reference, student_answer=ans.response
+            )
+        else:
+            result = offline_grade_and_classify(reference, ans.response, target_misconception)
+
         is_correct = bool(result.get("is_correct"))
         misconception = result.get("misconception_label", "none")
         explanation = result.get("explanation", "")
 
         # Scaffolded explanation for wrong answers (don't reveal the full answer).
         if not is_correct:
-            try:
-                explanation = client.explain(
-                    misconception_label=misconception,
-                    concept={"name": concept.name},
-                    student_answer=ans.response,
-                )
-            except Exception as exc:  # noqa: BLE001 - keep the grade even if explain fails
-                logger.warning("explain() failed: %s", exc)
+            if client is not None:
+                try:
+                    explanation = client.explain(
+                        misconception_label=misconception,
+                        concept={"name": concept.name},
+                        student_answer=ans.response,
+                    )
+                except Exception as exc:  # noqa: BLE001 - keep the grade even if explain fails
+                    logger.warning("explain() failed: %s", exc)
+            else:
+                explanation = offline_explain(misconception, concept.name)
 
         # Persist the attempt. Only seeded exercises (positive id) FK-link cleanly.
         if ans.question_id > 0:

@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-mist text-ink;
+}
+
+/* Light styling for markdown chapter bodies. */
+.prose-chapter h2 {
+  @apply text-2xl font-semibold mt-2 mb-3;
+}
+.prose-chapter h3 {
+  @apply text-lg font-semibold mt-5 mb-2;
+}
+.prose-chapter p {
+  @apply my-3 leading-relaxed;
+}
+.prose-chapter pre {
+  @apply bg-ink text-mist rounded-lg p-4 my-4 overflow-x-auto text-sm;
+}
+.prose-chapter code {
+  @apply font-mono;
+}
+.prose-chapter ul {
+  @apply list-disc ml-6 my-3;
+}
