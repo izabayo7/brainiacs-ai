@@ -1,0 +1,15 @@
+# ML notebook environment for Brainiacs AI
+pandas==2.2.3
+numpy==2.1.3
+scikit-learn==1.6.0
+xgboost==2.1.3
+matplotlib==3.10.0
+seaborn==0.13.2
+datasets==3.2.0
+anthropic==0.42.0
+# Notebook execution / kernel
+jupyter==1.1.1
+notebook==7.3.2
+nbformat==5.10.4
+nbclient==0.10.2
+ipykernel==6.29.5

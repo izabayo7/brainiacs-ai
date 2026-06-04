@@ -1,0 +1,26 @@
+{
+  "TF-IDF + LinearSVC": {
+    "accuracy": 0.5611,
+    "macro_precision": 0.4244,
+    "macro_recall": 0.398,
+    "macro_f1": 0.403
+  },
+  "TF-IDF + LogReg": {
+    "accuracy": 0.463,
+    "macro_precision": 0.3722,
+    "macro_recall": 0.3898,
+    "macro_f1": 0.3696
+  },
+  "TF-IDF + XGBoost": {
+    "accuracy": 0.5944,
+    "macro_precision": 0.4806,
+    "macro_recall": 0.4377,
+    "macro_f1": 0.4499
+  },
+  "Seed: TF-IDF + SVM": {
+    "accuracy": 0.3077,
+    "macro_precision": 0.2386,
+    "macro_recall": 0.303,
+    "macro_f1": 0.259
+  }
+}
