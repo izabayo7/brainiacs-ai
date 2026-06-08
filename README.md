@@ -16,7 +16,7 @@ threshold the student practises until ready to advance.
 
 ## Repository
 
-**GitHub:** _<add your repo URL here>_
+**GitHub:** https://github.com/izabayo7/brainiacs-ai
 
 ```
 brainiacs-ai/
