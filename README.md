@@ -18,12 +18,14 @@ threshold the student practises until ready to advance.
 
 **GitHub:** https://github.com/izabayo7/brainiacs-ai
 
+**Demo video:** _<add your YouTube link here>_
+
 ```
 brainiacs-ai/
-├── api/    FastAPI + SQLAlchemy + Alembic — the AI loop, BKT, seed content
-├── web/    Next.js + Tailwind — dashboard, concept page, quiz page
-├── ml/     Jupyter notebook — misconception classifier with real metrics
-└── docs/   deployment plan + app screenshots
+├── api/    FastAPI + SQLAlchemy + Alembic — the AI loop, BKT gate, seed content
+├── web/    Next.js + Tailwind — login, onboarding, dashboard, concept, quiz
+├── ml/     Jupyter notebooks — knowledge tracing (BKT vs DKT) + grading
+└── docs/   deployment plan + app screenshots + dataset research
 ```
 
 ## Set up and run
