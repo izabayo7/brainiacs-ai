@@ -70,12 +70,13 @@ make web                      # Next.js at http://localhost:3000
 
 ```bash
 cd ml && python3 -m venv .venv && .venv/bin/python -m pip install --requirement requirements.txt
-make notebook                 # opens ml/brainiacs_misconception_classifier.ipynb
+bash download_data.sh         # fetch ASSISTments + Mohler (gitignored, not re-hosted)
+make notebook                 # opens ml/kt_knowledge_tracing_assistments.ipynb
 ```
 
-The notebook runs **top-to-bottom without any API key** (the public-data validation
-and the seed-set baseline are API-free; the two Anthropic-API cells are clearly
-marked and optional).
+The knowledge-tracing and grading notebooks run **top-to-bottom with no API key**
+(BKT is pure NumPy; DKT uses PyTorch; grading uses scikit-learn). Datasets are loaded
+locally via `download_data.sh`.
 
 ## Navigation & layout (three screens)
 
