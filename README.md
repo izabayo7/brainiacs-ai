@@ -131,10 +131,12 @@ public data**.
 Trained on **ASSISTments 2009–2010 (corrected)** — ~283k cleaned interactions, 4,163
 students. Next-question-correctness **AUC** on an unseen-students split:
 
-| Model | AUC | Accuracy | Notes |
-|-------|----:|---------:|-------|
-| **BKT** (our NumPy implementation, `ml/kt_bkt.py`) | **0.714** | 0.718 | interpretable; its per-skill mastery probability drives the 0.85 unlock gate |
-| **DKT** (LSTM, PyTorch) | **0.755** | 0.736 | the deep model edges out BKT, as expected |
+| Model | AUC | Accuracy | Precision | Recall | F1 |
+|-------|----:|---------:|----------:|-------:|---:|
+| **BKT** (our NumPy implementation, `ml/kt_bkt.py`) | **0.714** | 0.718 | 0.741 | 0.883 | **0.806** |
+| **DKT** (LSTM, PyTorch) | **0.755** | 0.736 | 0.752 | 0.890 | **0.815** |
+
+(Interpretable BKT drives the 0.85 unlock gate; the deep DKT edges it out, as expected.)
 
 Both land in the published ASSISTments range (BKT ≈ 0.73–0.76). The mastery
 trajectory ([`ml/figures/kt_mastery_trajectory.png`](ml/figures/kt_mastery_trajectory.png))
