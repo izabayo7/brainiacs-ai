@@ -47,3 +47,6 @@ yarn-error.log*
 # Keep placeholder dirs
 !ml/figures/.gitkeep
 !docs/screenshots/.gitkeep
+
+# Extra ML venv attempt
+.venv-kt/

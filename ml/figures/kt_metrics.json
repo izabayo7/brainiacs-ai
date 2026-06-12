@@ -1,0 +1,13 @@
+{
+  "BKT": {
+    "auc": 0.7137,
+    "accuracy": 0.7177,
+    "skills": 30,
+    "test_predictions": 38019
+  },
+  "DKT": {
+    "auc": 0.7552,
+    "accuracy": 0.7359,
+    "test_predictions": 30122
+  }
+}

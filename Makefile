@@ -33,4 +33,4 @@ web:
 	cd web && npm run dev
 
 notebook:
-	cd ml && jupyter notebook brainiacs_misconception_classifier.ipynb
+	cd ml && jupyter notebook kt_knowledge_tracing_assistments.ipynb

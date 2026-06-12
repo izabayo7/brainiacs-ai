@@ -1,0 +1,10 @@
+{
+  "TF-IDF + SVR": {
+    "pearson": 0.5365,
+    "rmse": 0.9393
+  },
+  "TF-IDF + Ridge": {
+    "pearson": 0.5151,
+    "rmse": 0.9323
+  }
+}
