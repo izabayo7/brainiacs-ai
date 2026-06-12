@@ -2,12 +2,18 @@
   "BKT": {
     "auc": 0.7137,
     "accuracy": 0.7177,
+    "precision": 0.7405,
+    "recall": 0.8831,
+    "f1": 0.8055,
     "skills": 30,
     "test_predictions": 38019
   },
   "DKT": {
     "auc": 0.7552,
     "accuracy": 0.7359,
+    "precision": 0.752,
+    "recall": 0.8897,
+    "f1": 0.8151,
     "test_predictions": 30122
   }
 }
