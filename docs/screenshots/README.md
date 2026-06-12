@@ -1,13 +1,15 @@
 # App screenshots
 
-Capture these three screens for the submission / README. With both servers running
-(`make api` and `make web`), open the app and save PNGs into this folder:
+These are captured from the **live build** (Next.js app + FastAPI backend), matching
+the Brainiacs AI Figma design:
 
-| File | URL | What to show |
-|------|-----|--------------|
-| `dashboard.png` | http://localhost:3000/ | Student picker, "Continue →" panel, concept map with LOCKED / AVAILABLE / MASTERED states |
-| `concept.png` | http://localhost:3000/concept/1 | A chapter (markdown + worked pseudocode example) and the "Start quiz" button |
-| `quiz.png` | http://localhost:3000/quiz/1 | A quiz with the three question types, then the graded result (misconception label + scaffolded explanation + mastery meter) |
+| File | Screen |
+|------|--------|
+| `dashboard.png` | Dashboard — "what's next" + concept map (locked/available/mastered) |
+| `concept.png` | Concept / Learn page — chapter, worked example, lesson sidebar |
+| `quiz.png` | Quiz workspace — the three pseudocode-safe question types |
+| `quiz-result.png` | Graded quiz — misconception labels, scaffolded feedback, mastery gate |
 
-Tip: in macOS, `Cmd+Shift+4` then space-click the browser window captures a clean
-window screenshot. Once saved here, they render in the main README.
+To re-capture after UI changes: start the backend (`make api`) and frontend
+(`make web`), then run the Playwright script (`/tmp/shoot.py` during development) or
+simply screenshot the three routes at http://localhost:3000.

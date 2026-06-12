@@ -93,16 +93,22 @@ locally via `download_data.sh`.
 
 ## Designs
 
-A polished **Figma** is in progress (separate from this build); the current UI is
-clean, neutral, and functional by design. App screenshots live in
-[`docs/screenshots/`](docs/screenshots/) — see that folder's README for the three
-shots to capture.
+The UI is implemented from the **Brainiacs AI Figma**:
+[figma.com/design/Dq6t0PAnu5l6LFqe7HeXAA](https://www.figma.com/design/Dq6t0PAnu5l6LFqe7HeXAA/Brainiacs-AI?node-id=5-8).
+The running app (screenshots below, captured from the live build) matches that
+design system — indigo brand, emerald mastery bars, white rounded cards.
 
-<!-- Once captured:
+**Dashboard** — "what's next" + concept map with locked / available / mastered states:
+
 ![Dashboard](docs/screenshots/dashboard.png)
+
+**Concept / Learn page** — chapter, worked example, tutor note, lesson sidebar:
+
 ![Concept page](docs/screenshots/concept.png)
-![Quiz with feedback](docs/screenshots/quiz.png)
--->
+
+**Quiz with feedback** — graded answers, named misconception, scaffolded explanation, mastery gate:
+
+![Quiz with feedback](docs/screenshots/quiz-result.png)
 
 ## Deployment plan
 
