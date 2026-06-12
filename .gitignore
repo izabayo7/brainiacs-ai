@@ -50,3 +50,6 @@ yarn-error.log*
 
 # Extra ML venv attempt
 .venv-kt/
+
+# Personal presentation notes — keep local, do not commit
+ml/PRESENTATION_GUIDE.md

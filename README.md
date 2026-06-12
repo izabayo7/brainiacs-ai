@@ -18,7 +18,7 @@ threshold the student practises until ready to advance.
 
 **GitHub:** https://github.com/izabayo7/brainiacs-ai
 
-**Demo video:** _<add your YouTube link here>_
+**Demo video:** https://youtu.be/U1HbG_nlu2o
 
 ```
 brainiacs-ai/
