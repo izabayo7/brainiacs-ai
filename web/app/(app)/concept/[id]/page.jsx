@@ -122,6 +122,36 @@ export default function ConceptPage() {
               )}
             </div>
           </div>
+
+          {/* Ask the tutor */}
+          <div className="card p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="step-badge bg-brand-600 text-white">+</span>
+                <span className="font-semibold">Ask the tutor</span>
+              </div>
+              <span className="font-mono text-xs text-slate-400">Qwen3.5-4B · self-hosted</span>
+            </div>
+            <p className="text-sm text-body">
+              Scoped to this lesson — concept questions only. The tutor won't solve
+              exercises here; that happens in the quiz, where it can see your attempt.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {["Give me a smaller example", "Where do people usually slip?"].map((q) => (
+                <span key={q} className="rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-700">
+                  {q}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <input
+                disabled
+                placeholder={`Ask anything about ${concept.name.toLowerCase()}…`}
+                className="flex-1 rounded-xl border border-line px-3.5 py-2.5 text-sm"
+              />
+              <button className="rounded-xl bg-brand-600 px-5 font-medium text-white">Ask</button>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}

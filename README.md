@@ -95,8 +95,14 @@ locally via `download_data.sh`.
 
 The UI is implemented from the **Brainiacs AI Figma**:
 [figma.com/design/Dq6t0PAnu5l6LFqe7HeXAA](https://www.figma.com/design/Dq6t0PAnu5l6LFqe7HeXAA/Brainiacs-AI?node-id=5-8).
-The running app (screenshots below, captured from the live build) matches that
-design system — indigo brand, emerald mastery bars, white rounded cards.
+The screenshots below are captured from the **live build** and match that design
+system — indigo brand, emerald mastery bars, white rounded cards. Full flow:
+**Login → Onboarding → Dashboard → Concept → Quiz**.
+
+**Login** (`/login`) and **Onboarding** (`/welcome`):
+
+![Login](docs/screenshots/login.png)
+![Onboarding](docs/screenshots/welcome.png)
 
 **Dashboard** — "what's next" + concept map with locked / available / mastered states:
 
