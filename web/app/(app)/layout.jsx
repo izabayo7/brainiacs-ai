@@ -1,5 +1,3 @@
-import Logo from "@/components/Logo";
-
 // Layout for the authenticated app shell (header + container). Auth pages
 // (/login, /welcome) live outside this group and render full-bleed.
 export default function AppLayout({ children }) {
@@ -8,10 +6,7 @@ export default function AppLayout({ children }) {
       <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <a href="/" className="flex items-center gap-2">
-            <Logo />
-            <span className="text-lg font-semibold tracking-tight">
-              Brainiacs <span className="text-brand-600">AI</span>
-            </span>
+            <img src="/logo.svg" alt="Brainiacs AI" className="h-8 w-auto" />
           </a>
           <nav className="hidden items-center gap-1 text-sm font-medium text-body md:flex">
             <a href="/" className="rounded-lg px-3 py-1.5 text-ink">Dashboard</a>

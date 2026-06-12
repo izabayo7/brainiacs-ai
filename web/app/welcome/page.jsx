@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
 
 const STEPS = [
   {
@@ -26,10 +25,11 @@ export default function WelcomePage() {
       <div className="relative flex flex-col justify-center overflow-hidden bg-slate-900 px-10 py-12 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(110%_110%_at_100%_0%,rgba(99,102,241,.35),transparent_55%)]" />
         <div className="relative">
-          <div className="mb-10 flex items-center gap-2">
-            <Logo className="h-7 w-7" />
-            <span className="text-lg font-semibold">Brainiacs AI</span>
-          </div>
+          <img
+            src="/logo.svg"
+            alt="Brainiacs AI"
+            className="mb-10 h-9 w-auto [filter:brightness(0)_invert(1)]"
+          />
           <h1 className="text-4xl font-semibold">You're in! 🎉</h1>
           <p className="mt-4 max-w-md text-white/70">
             You have now joined African Leadership University on Brainiacs AI — a tutor

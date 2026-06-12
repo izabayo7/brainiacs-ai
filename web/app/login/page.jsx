@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,14 +12,20 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Hero panel */}
-      <div className="relative hidden overflow-hidden bg-gradient-to-br from-teal-400 via-emerald-500 to-emerald-700 lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_0%_0%,rgba(255,255,255,.18),transparent_60%)]" />
-        <div className="absolute left-8 top-8 flex items-center gap-2 text-white">
-          <Logo className="h-7 w-7 [&_path]:fill-white" />
-          <span className="text-lg font-semibold">Brainiacs AI</span>
-        </div>
-        <p className="absolute bottom-12 left-8 right-12 text-2xl font-semibold leading-snug text-white">
+      {/* Hero panel — real photo with a teal/emerald wash */}
+      <div className="relative hidden overflow-hidden lg:block">
+        <img
+          src="/login-hero.jpg"
+          alt="A learner studying programming"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-500/70 via-emerald-600/55 to-emerald-900/80" />
+        <img
+          src="/logo.svg"
+          alt="Brainiacs AI"
+          className="absolute left-8 top-8 h-9 w-auto [filter:brightness(0)_invert(1)]"
+        />
+        <p className="absolute bottom-12 left-8 right-12 text-2xl font-semibold leading-snug text-white drop-shadow">
           A curriculum-aware AI tutoring platform for teaching programming fundamentals
           to beginners.
         </p>
@@ -29,9 +34,7 @@ export default function LoginPage() {
       {/* Form panel */}
       <div className="flex items-center justify-center bg-white px-6 py-10">
         <form onSubmit={submit} className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <Logo /> <span className="text-lg font-semibold">Brainiacs AI</span>
-          </div>
+          <img src="/logo.svg" alt="Brainiacs AI" className="mb-8 h-9 w-auto lg:hidden" />
           <h1 className="text-2xl font-semibold">Login to continue</h1>
           <p className="mt-1 text-sm text-body">
             Welcome back, enter your credentials to continue
