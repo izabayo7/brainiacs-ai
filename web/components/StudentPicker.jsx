@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getStudentId, setStudentId } from "@/lib/student";
 
-// No real auth in the demo — just pick who you are.
+// No real auth in the demo — pick which learner you are.
 export default function StudentPicker({ onChange }) {
   const [students, setStudents] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -32,18 +32,18 @@ export default function StudentPicker({ onChange }) {
     onChange?.(id);
   }
 
-  if (error) return <p className="text-sm text-red-600">Could not load students: {error}</p>;
+  if (error) return <p className="text-sm text-red-600">API offline: {error}</p>;
 
   return (
-    <div className="flex items-center gap-3">
-      <label htmlFor="student" className="text-sm text-gray-600">
-        Signed in as
-      </label>
+    <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-1.5 shadow-card">
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white">
+        {(students.find((s) => s.id === selected)?.name || "?").slice(0, 1)}
+      </span>
       <select
-        id="student"
+        aria-label="Select learner"
         value={selected ?? ""}
         onChange={(e) => handleSelect(Number(e.target.value))}
-        className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white"
+        className="bg-transparent text-sm font-medium text-ink focus:outline-none"
       >
         {students.map((s) => (
           <option key={s.id} value={s.id}>

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import StudentPicker from "@/components/StudentPicker";
-import ConceptMap from "@/components/ConceptMap";
+import ConceptCard from "@/components/ConceptCard";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -28,57 +28,84 @@ export default function Dashboard() {
     if (studentId) load(studentId);
   }, [studentId, load]);
 
+  const nameById = Object.fromEntries(concepts.map((c) => [c.id, c.name]));
   const nextConcept = concepts.find((c) => c.slug === nextSlug);
+  const masteredCount = concepts.filter((c) => c.state === "mastered").length;
 
-  function openConcept(concept) {
-    router.push(`/concept/${concept.id}`);
-  }
+  const openConcept = (concept) => router.push(`/concept/${concept.id}`);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Your learning path</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Work through the concepts in order. Each unlocks the next.
+          <h1 className="text-3xl font-semibold tracking-tight">Welcome back 👋</h1>
+          <p className="mt-1 text-body">
+            {masteredCount > 0
+              ? `You've mastered ${masteredCount} concept${masteredCount > 1 ? "s" : ""} so far · keep the streak going`
+              : "Let's find where to start you — work through the concepts in order."}
           </p>
         </div>
         <StudentPicker onChange={setStudentId} />
       </div>
 
-      {error && <p className="text-red-600 mb-4">Could not reach the API: {error}</p>}
+      {error && (
+        <div className="card border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Could not reach the API ({error}). Is the backend running on :8000?
+        </div>
+      )}
 
-      <div className="grid gap-8 md:grid-cols-[20rem_1fr]">
-        {/* Left pane: the map */}
-        <aside>
-          <ConceptMap concepts={concepts} onOpen={openConcept} />
-        </aside>
+      {/* Featured: what's next */}
+      {nextConcept ? (
+        <div className="relative overflow-hidden rounded-2xl border border-line bg-white p-7 shadow-card">
+          <span className="absolute inset-y-0 left-0 w-1.5 bg-brand-600" />
+          <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+            Pick up where you left off
+          </span>
+          <h2 className="mt-3 text-2xl font-semibold">{nextConcept.name}</h2>
+          <p className="mt-2 max-w-xl text-body">
+            This is your next concept. Read the short lesson, then a quick AI-generated
+            quiz adapts to how you answer.
+          </p>
+          <div className="mt-5 flex items-center gap-4">
+            <button
+              onClick={() => openConcept(nextConcept)}
+              className="rounded-xl bg-brand-600 px-6 py-3 font-medium text-white transition hover:bg-brand-700"
+            >
+              Continue →
+            </button>
+            <span className="font-mono text-sm text-slate-400">
+              ~10 min lesson · adaptive quiz
+            </span>
+          </div>
+        </div>
+      ) : concepts.length > 0 ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-7">
+          <h2 className="text-xl font-semibold">🎉 All available concepts mastered</h2>
+          <p className="mt-2 text-body">Nothing left to unlock right now — great work!</p>
+        </div>
+      ) : null}
 
-        {/* Main pane: what's next */}
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
-            What's next
+      {/* Concept map */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Your concept map
           </h2>
-          {nextConcept ? (
-            <div className="rounded-2xl border border-calm/30 bg-white p-8">
-              <p className="text-gray-500 text-sm">Continue with</p>
-              <h3 className="text-2xl font-semibold mt-1 mb-4">{nextConcept.name}</h3>
-              <button
-                onClick={() => openConcept(nextConcept)}
-                className="rounded-xl bg-calm px-6 py-3 text-white font-medium hover:bg-calm/90"
-              >
-                Continue →
-              </button>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-green-200 bg-green-50 p-8">
-              <h3 className="text-xl font-semibold">🎉 All available concepts mastered</h3>
-              <p className="text-gray-600 mt-2">
-                Nothing left to unlock right now. Great work!
-              </p>
-            </div>
-          )}
-        </section>
+          <span className="font-mono text-xs text-slate-400">
+            {masteredCount}/{concepts.length} mastered · unlock at 85%
+          </span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {concepts.map((c) => (
+            <ConceptCard
+              key={c.id}
+              concept={c}
+              prereqName={c.prerequisite_ids?.map((id) => nameById[id]).filter(Boolean).join(", ")}
+              onOpen={openConcept}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

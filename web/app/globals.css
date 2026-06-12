@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,25 +9,27 @@
 }
 
 body {
-  @apply bg-mist text-ink;
+  @apply bg-mist text-ink antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Light styling for markdown chapter bodies. */
-.prose-chapter h2 {
-  @apply text-2xl font-semibold mt-2 mb-3;
+/* Card primitive used across screens. */
+.card {
+  @apply rounded-2xl border border-line bg-white shadow-card;
 }
-.prose-chapter h3 {
-  @apply text-lg font-semibold mt-5 mb-2;
+
+/* Small numbered step badge (1, 2, 3 …). */
+.step-badge {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-xs font-semibold text-brand-600;
 }
-.prose-chapter p {
-  @apply my-3 leading-relaxed;
-}
+
+/* Markdown chapter body. */
+.prose-chapter h2 { @apply text-xl font-semibold mt-1 mb-3; }
+.prose-chapter h3 { @apply text-base font-semibold mt-5 mb-2 text-ink; }
+.prose-chapter p { @apply my-3 leading-relaxed text-body; }
 .prose-chapter pre {
-  @apply bg-ink text-mist rounded-lg p-4 my-4 overflow-x-auto text-sm;
+  @apply bg-slate-900 text-slate-100 rounded-xl p-4 my-4 overflow-x-auto text-sm font-mono;
 }
-.prose-chapter code {
-  @apply font-mono;
-}
-.prose-chapter ul {
-  @apply list-disc ml-6 my-3;
-}
+.prose-chapter code { @apply font-mono text-[0.92em]; }
+.prose-chapter ul { @apply list-disc ml-6 my-3 text-body; }
+.prose-chapter strong { @apply text-ink; }

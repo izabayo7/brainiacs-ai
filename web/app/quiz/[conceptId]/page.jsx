@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { getStudentId } from "@/lib/student";
 import QuizQuestion from "@/components/QuizQuestion";
 import ExplanationPanel from "@/components/ExplanationPanel";
-import MasteryMeter from "@/components/MasteryMeter";
+import MasteryBar from "@/components/MasteryBar";
 
 export default function QuizPage() {
   const { conceptId } = useParams();
@@ -30,7 +30,6 @@ export default function QuizPage() {
       .generateQuiz(conceptId, sid)
       .then((q) => {
         setQuiz(q);
-        // Seed ordering questions with their initial (shuffled) line order.
         const init = {};
         q.questions.forEach((question) => {
           if (question.type === "pseudocode_order") init[question.id] = question.options || [];
@@ -40,9 +39,7 @@ export default function QuizPage() {
       .catch((e) => setError(e));
   }, [conceptId, router]);
 
-  function setResponse(qid, value) {
-    setResponses((prev) => ({ ...prev, [qid]: value }));
-  }
+  const setResponse = (qid, v) => setResponses((p) => ({ ...p, [qid]: v }));
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -72,55 +69,55 @@ export default function QuizPage() {
   if (error && !quiz) {
     const locked = error.status === 403;
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-        <p className="text-4xl mb-3">{locked ? "🔒" : "⚠️"}</p>
-        <h1 className="text-xl font-semibold mb-2">
+      <div className="card mx-auto max-w-lg p-10 text-center">
+        <p className="mb-3 text-4xl">{locked ? "🔒" : "⚠️"}</p>
+        <h1 className="mb-2 text-xl font-semibold">
           {locked ? "This quiz is locked" : "Could not start the quiz"}
         </h1>
-        <p className="text-gray-600 mb-5">{error.message}</p>
-        <a href="/" className="text-calm font-medium">← Back to your path</a>
+        <p className="mb-5 text-body">{error.message}</p>
+        <a href="/" className="font-medium text-brand-600">← Back to your path</a>
       </div>
     );
   }
-
-  if (!quiz) return <p className="text-gray-500">Generating your quiz…</p>;
+  if (!quiz) return <p className="text-slate-400">Generating your quiz…</p>;
 
   const gradedById = {};
   (result?.graded || []).forEach((g) => (gradedById[g.question_id] = g));
 
   return (
     <div>
-      <a href="/" className="text-sm text-gray-500 hover:text-calm">← Your path</a>
-      <div className="flex items-center justify-between mt-2 mb-6">
-        <h1 className="text-2xl font-semibold">Quiz</h1>
-        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+      <div className="mb-6 flex items-center justify-between">
+        <a href="/" className="text-sm text-slate-500 hover:text-brand-600">‹ Your path</a>
+        <span className="rounded-full bg-brand-50 px-3 py-1 font-mono text-xs text-brand-700">
           {quiz.source === "llm" ? "AI-generated for you" : "practice set"}
         </span>
       </div>
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Quick check</h1>
 
       {/* Result summary */}
       {result && (
-        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <p className="text-lg font-medium mb-3">{result.encouragement}</p>
-          <MasteryMeter pMastered={result.p_mastered} mastered={result.mastered} />
+        <div className="card mb-6 p-6">
+          <p className="text-lg font-medium">{result.encouragement}</p>
+          <div className="mt-4">
+            <MasteryBar value={result.p_mastered} />
+            <p className="mt-2 font-mono text-xs text-slate-400">
+              mastery {Math.round(result.p_mastered * 100)}% · {result.mastered ? "concept mastered" : "unlock at 85%"}
+            </p>
+          </div>
           {result.newly_unlocked.length > 0 && (
-            <p className="mt-4 text-green-700">
+            <p className="mt-4 font-medium text-emerald-700">
               🔓 You just unlocked: {result.newly_unlocked.join(", ")}
             </p>
           )}
           <div className="mt-5 flex gap-3">
             {result.mastered ? (
-              <button
-                onClick={() => router.push("/")}
-                className="rounded-xl bg-green-600 px-5 py-2.5 text-white font-medium"
-              >
+              <button onClick={() => router.push("/")}
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 font-medium text-white">
                 Back to path →
               </button>
             ) : (
-              <button
-                onClick={() => window.location.reload()}
-                className="rounded-xl bg-calm px-5 py-2.5 text-white font-medium"
-              >
+              <button onClick={() => window.location.reload()}
+                className="rounded-xl bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700">
                 Practise again
               </button>
             )}
@@ -146,11 +143,11 @@ export default function QuizPage() {
 
       {!result && (
         <div className="mt-6">
-          {error && <p className="text-red-600 mb-3">{error.message}</p>}
+          {error && <p className="mb-3 text-red-600">{error.message}</p>}
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="rounded-xl bg-calm px-6 py-3 text-white font-medium hover:bg-calm/90 disabled:opacity-50"
+            className="rounded-xl bg-brand-600 px-6 py-3 font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {submitting ? "Grading…" : "Submit answers"}
           </button>
