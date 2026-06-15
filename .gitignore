@@ -56,3 +56,6 @@ ml/PRESENTATION_GUIDE.md
 
 # Personal study notes — keep local, never commit
 .local/
+
+# Local launch config (machine-specific)
+.claude/launch.json
