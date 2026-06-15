@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_student
 from app.bkt import is_mastered, update_mastery
 from app.db import get_db
 from app.grading import offline_explain, offline_grade_and_classify
@@ -74,15 +75,15 @@ def _seeded_quiz(db: Session, concept_id: int) -> QuizOut:
 
 @router.post("/{concept_id}/generate", response_model=QuizOut)
 def generate_quiz(
-    concept_id: int, student_id: int, db: Session = Depends(get_db)
+    concept_id: int,
+    current: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
 ) -> QuizOut:
     concept = db.get(Concept, concept_id)
     if concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
-    if db.get(Student, student_id) is None:
-        raise HTTPException(status_code=404, detail="Student not found")
 
-    states = compute_states(db, student_id)
+    states = compute_states(db, current.id)
     if states[concept_id]["state"] == "locked":
         raise HTTPException(status_code=403, detail="Concept is locked")
     student_mastery = states[concept_id]["p_mastered"]
@@ -146,15 +147,17 @@ def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | No
 
 @router.post("/{concept_id}/submit", response_model=QuizResultOut)
 def submit_quiz(
-    concept_id: int, payload: QuizSubmitIn, db: Session = Depends(get_db)
+    concept_id: int,
+    payload: QuizSubmitIn,
+    current: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
 ) -> QuizResultOut:
-    student = db.get(Student, payload.student_id)
     concept = db.get(Concept, concept_id)
-    if student is None or concept is None:
-        raise HTTPException(status_code=404, detail="Student or concept not found")
+    if concept is None:
+        raise HTTPException(status_code=404, detail="Concept not found")
 
     # Which concepts were already mastered, to compute what gets newly unlocked.
-    before = compute_states(db, payload.student_id)
+    before = compute_states(db, current.id)
 
     # Use the LLM when configured; otherwise grade seeded answers deterministically
     # so the demo runs with no API key (and stays deterministic for the video).
@@ -167,13 +170,13 @@ def submit_quiz(
     # Load / create this student's mastery row for the concept.
     estimate = db.scalars(
         select(MasteryEstimate).where(
-            MasteryEstimate.student_id == payload.student_id,
+            MasteryEstimate.student_id == current.id,
             MasteryEstimate.concept_id == concept_id,
         )
     ).first()
     if estimate is None:
         estimate = MasteryEstimate(
-            student_id=payload.student_id, concept_id=concept_id, p_mastered=0.0, attempts=0
+            student_id=current.id, concept_id=concept_id, p_mastered=0.0, attempts=0
         )
         db.add(estimate)
 
@@ -212,7 +215,7 @@ def submit_quiz(
         if ans.question_id > 0:
             db.add(
                 Attempt(
-                    student_id=payload.student_id,
+                    student_id=current.id,
                     exercise_id=ans.question_id,
                     response_json=ans.response,
                     is_correct=is_correct,
@@ -239,7 +242,7 @@ def submit_quiz(
     db.commit()
 
     # Recompute states to find newly-unlocked concepts.
-    after = compute_states(db, payload.student_id)
+    after = compute_states(db, current.id)
     mastered_after = {cid for cid, info in after.items() if info["state"] == "mastered"}
     available_after = {cid for cid, info in after.items() if info["state"] == "available"}
     newly_unlocked_ids = available_after - {
@@ -249,7 +252,7 @@ def submit_quiz(
     newly_unlocked = [id_to_slug[cid] for cid in newly_unlocked_ids]
 
     mastered_now = is_mastered(estimate.p_mastered, estimate.attempts)
-    nxt = recommend_next_concept(db, payload.student_id)
+    nxt = recommend_next_concept(db, current.id)
 
     if mastered_now:
         encouragement = "Great work — you've mastered this concept!"

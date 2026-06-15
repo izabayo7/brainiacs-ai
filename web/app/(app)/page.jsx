@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { api } from "@/lib/api";
-import StudentPicker from "@/components/StudentPicker";
 import ConceptCard from "@/components/ConceptCard";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [studentId, setStudentId] = useState(null);
+  const { data: session } = useSession();
   const [concepts, setConcepts] = useState([]);
   const [nextSlug, setNextSlug] = useState(null);
   const [error, setError] = useState(null);
 
-  const load = useCallback((sid) => {
-    if (!sid) return;
-    setError(null);
-    Promise.all([api.listConcepts(sid), api.getProgress(sid)])
+  useEffect(() => {
+    Promise.all([api.listConcepts(), api.getProgress()])
       .then(([cs, progress]) => {
         setConcepts(cs);
         setNextSlug(progress.next_concept_slug);
@@ -24,29 +22,24 @@ export default function Dashboard() {
       .catch((e) => setError(e.message));
   }, []);
 
-  useEffect(() => {
-    if (studentId) load(studentId);
-  }, [studentId, load]);
-
   const nameById = Object.fromEntries(concepts.map((c) => [c.id, c.name]));
   const nextConcept = concepts.find((c) => c.slug === nextSlug);
   const masteredCount = concepts.filter((c) => c.state === "mastered").length;
+  const firstName = (session?.user?.name || "").split(" ")[0];
 
   const openConcept = (concept) => router.push(`/concept/${concept.id}`);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Welcome back 👋</h1>
-          <p className="mt-1 text-body">
-            {masteredCount > 0
-              ? `You've mastered ${masteredCount} concept${masteredCount > 1 ? "s" : ""} so far · keep the streak going`
-              : "Let's find where to start you — work through the concepts in order."}
-          </p>
-        </div>
-        <StudentPicker onChange={setStudentId} />
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Welcome back{firstName ? `, ${firstName}` : ""} 👋
+        </h1>
+        <p className="mt-1 text-body">
+          {masteredCount > 0
+            ? `You've mastered ${masteredCount} concept${masteredCount > 1 ? "s" : ""} so far · keep the streak going`
+            : "Let's find where to start you — work through the concepts in order."}
+        </p>
       </div>
 
       {error && (
@@ -55,7 +48,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Featured: what's next */}
       {nextConcept ? (
         <div className="relative overflow-hidden rounded-2xl border border-line bg-white p-7 shadow-card">
           <span className="absolute inset-y-0 left-0 w-1.5 bg-brand-600" />
@@ -68,15 +60,11 @@ export default function Dashboard() {
             quiz adapts to how you answer.
           </p>
           <div className="mt-5 flex items-center gap-4">
-            <button
-              onClick={() => openConcept(nextConcept)}
-              className="rounded-xl bg-brand-600 px-6 py-3 font-medium text-white transition hover:bg-brand-700"
-            >
+            <button onClick={() => openConcept(nextConcept)}
+              className="rounded-xl bg-brand-600 px-6 py-3 font-medium text-white transition hover:bg-brand-700">
               Continue →
             </button>
-            <span className="font-mono text-sm text-slate-400">
-              ~10 min lesson · adaptive quiz
-            </span>
+            <span className="font-mono text-sm text-slate-400">~10 min lesson · adaptive quiz</span>
           </div>
         </div>
       ) : concepts.length > 0 ? (
@@ -86,7 +74,6 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      {/* Concept map */}
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">

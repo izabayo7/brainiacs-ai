@@ -23,5 +23,12 @@ class Settings(BaseSettings):
     # CORS origin for the Next.js dev server.
     frontend_origin: str = "http://localhost:3000"
 
+    # --- Auth ---
+    # Secret used to sign the backend's own JWTs (HS256). Override in .env.
+    jwt_secret: str = "dev-only-change-me"
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+    # Shared secret the Next.js auth layer sends when syncing a Google user.
+    auth_sync_secret: str = "dev-only-sync-secret"
+
 
 settings = Settings()

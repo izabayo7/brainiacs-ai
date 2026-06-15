@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { api } from "@/lib/api";
-import { getStudentId } from "@/lib/student";
 
 export default function ConceptPage() {
   const { id } = useParams();
@@ -14,12 +13,7 @@ export default function ConceptPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const sid = getStudentId();
-    if (!sid) {
-      router.replace("/");
-      return;
-    }
-    Promise.all([api.getConcept(id, sid), api.listConcepts(sid)])
+    Promise.all([api.getConcept(id), api.listConcepts()])
       .then(([c, list]) => {
         setConcept(c);
         const idx = list.findIndex((x) => x.id === c.id);

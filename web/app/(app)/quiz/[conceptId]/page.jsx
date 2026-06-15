@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { getStudentId } from "@/lib/student";
 import QuizQuestion from "@/components/QuizQuestion";
 import ExplanationPanel from "@/components/ExplanationPanel";
 import MasteryBar from "@/components/MasteryBar";
@@ -12,7 +11,6 @@ export default function QuizPage() {
   const { conceptId } = useParams();
   const router = useRouter();
 
-  const [studentId, setStudentId] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [responses, setResponses] = useState({});
   const [result, setResult] = useState(null);
@@ -20,14 +18,8 @@ export default function QuizPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const sid = getStudentId();
-    if (!sid) {
-      router.replace("/");
-      return;
-    }
-    setStudentId(sid);
     api
-      .generateQuiz(conceptId, sid)
+      .generateQuiz(conceptId)
       .then((q) => {
         setQuiz(q);
         const init = {};
@@ -53,7 +45,6 @@ export default function QuizPage() {
         response: responses[q.id] ?? "",
       }));
       const res = await api.submitQuiz(conceptId, {
-        student_id: studentId,
         concept_id: Number(conceptId),
         answers,
       });

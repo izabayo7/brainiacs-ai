@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import chapters, concepts, progress, quiz
+from app.routers import auth, chapters, concepts, progress, quiz
 
 app = FastAPI(
     title="Brainiacs AI API",
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(concepts.router)
 app.include_router(chapters.router)
 app.include_router(quiz.router)

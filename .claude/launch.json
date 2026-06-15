@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "autoPort": false,
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "/Users/cedricizabayo/.nvm/versions/node/v20.19.4/bin/npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}

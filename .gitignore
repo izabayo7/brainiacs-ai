@@ -53,3 +53,6 @@ yarn-error.log*
 
 # Personal presentation notes — keep local, do not commit
 ml/PRESENTATION_GUIDE.md
+
+# Personal study notes — keep local, never commit
+.local/

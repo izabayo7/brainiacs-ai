@@ -55,6 +55,41 @@ class StudentOut(BaseModel):
     email: str
 
 
+# --- Auth ---------------------------------------------------------------------
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+    avatar_url: str | None = None
+    provider: str
+
+
+class RegisterIn(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str
+
+
+class GoogleSyncIn(BaseModel):
+    email: str
+    name: str
+    avatar_url: str | None = None
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+
 # --- Quiz ---------------------------------------------------------------------
 
 class QuizQuestionOut(BaseModel):
@@ -85,7 +120,7 @@ class AnswerIn(BaseModel):
 
 
 class QuizSubmitIn(BaseModel):
-    student_id: int
+    # student comes from the auth token, not the payload.
     concept_id: int
     answers: list[AnswerIn]
 
