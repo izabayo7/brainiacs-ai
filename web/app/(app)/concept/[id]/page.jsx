@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import { api } from "@/lib/api";
 import AskTutor from "@/components/AskTutor";
+import Markdown from "@/components/Markdown";
 
 export default function ConceptPage() {
   const { id } = useParams();
@@ -84,11 +84,7 @@ export default function ConceptPage() {
         <div className="space-y-6">
           <div className="card p-6">
             <div className="prose-chapter">
-              {chapter ? (
-                <ReactMarkdown>{chapter.body_md}</ReactMarkdown>
-              ) : (
-                <ReactMarkdown>{concept.worked_example_md}</ReactMarkdown>
-              )}
+              <Markdown>{chapter ? chapter.body_md : concept.worked_example_md}</Markdown>
             </div>
           </div>
         </div>

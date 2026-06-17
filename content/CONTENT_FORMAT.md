@@ -60,16 +60,16 @@ Per-type fields:
 
 ## Misconception enum
 
-Active values (from the product spec):
+Active values:
 
 `variable_name_semantics`, `assignment_as_equality`, `loop_boundary_offbyone`,
 `loop_execution_model`, `scope_confusion`, `recursion_no_base_case`,
 `recursion_state_confusion`, `array_index_value_confusion`, `boolean_logic_error`,
-`algorithm_sequencing_error`, `none`.
+`algorithm_sequencing_error`, `type_confusion`, `tracing_error`, `none`.
 
-Proposed additions — **decide before the first seed**, because the misconception
-classifier's label set and the BKT skill map depend on this list:
-`type_confusion` (data-types lesson), `tracing_error` (flowcharts / hand-tracing).
+Note: `type_confusion` (data-types lesson) and `tracing_error` (flowcharts /
+hand-tracing) were added to the original 11-label spec. The misconception classifier's
+label set and the BKT skill map must include these two before the first seed.
 
 ## Pseudocode house style (used in all lessons)
 
@@ -107,3 +107,35 @@ or no `hard` exercise, so authors keep a healthy spread.
 `loader` (idempotent upsert into Postgres, keyed by `slug` for concepts and a stable key
 for exercises). Re-running the loader updates existing rows; it never duplicates.
 Content loading is a **seeder**, separate from Alembic schema migrations.
+
+## Flowcharts and other visuals
+
+Lessons and exercises may include flowcharts that the frontend draws. A flowchart is
+written as a fenced ` ```flowchart ` block containing JSON with `nodes` and `edges`. The
+renderer draws it with light fills and black strokes, matching the printed-manual style;
+authors never paste image files.
+
+- Node: `{ "id": string, "shape": "terminal"|"io"|"process"|"decision"|"connector", "text": string }`
+- Edge: `{ "from": nodeId, "to": nodeId, "label"?: string }` (the optional `label` is for
+  the yes/no branches of a decision, which is only used from the conditionals lesson on)
+
+Shape meanings: `terminal` = oval (start/end), `io` = parallelogram (input/output),
+`process` = rectangle (a calculation or assignment), `decision` = diamond (a choice; not
+used before the conditionals lesson), `connector` = small circle (page link).
+
+A ` ```flowchart ` block that has `nodes` and no `edges` renders as a labelled **legend**,
+used to show the symbol reference.
+
+Validator additions: every ` ```flowchart ` block must be valid JSON; each `shape` must be
+in the enum above; each edge `from` and `to` must reference an existing node `id`.
+
+## Visual exercise fields (all optional)
+
+- `prompt_diagram`: a flowchart spec object (`{ "nodes": [...], "edges": [...] }`, same
+  schema as the ` ```flowchart ` block) shown above the exercise prompt, so an `mcq` or
+  `predict_output` can ask the learner to read or trace a flowchart.
+- On a `pseudocode_order` exercise, `format: "flowchart"` tells the engine to render the
+  orderable items as draggable flowchart boxes. When `format` is `"flowchart"`, each entry
+  in `options` and `correct_answer` is an object `{ "shape": ..., "text": ... }` instead of
+  a plain string, and `correct_answer` is still a permutation of `options`. When `format`
+  is absent or `"text"`, items are plain strings as before.
