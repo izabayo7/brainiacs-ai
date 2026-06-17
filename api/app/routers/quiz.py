@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+import random
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -56,19 +57,38 @@ _reference_cache: dict[int, dict] = {}
 NUM_QUESTIONS = 4
 
 
+def _shuffle_options(options, qtype: str, correct=None):
+    """Shuffle the displayed options so answer positions aren't shareable between
+    students ("pick option 2"). Grading compares the option TEXT, so reordering is
+    safe. For ordering questions, avoid presenting the lines already in the right order."""
+    if not isinstance(options, list) or len(options) < 2:
+        return options
+    shuffled = list(options)
+    random.shuffle(shuffled)
+    if qtype == "pseudocode_order" and isinstance(correct, list):
+        tries = 0
+        while shuffled == list(correct) and tries < 10:
+            random.shuffle(shuffled)
+            tries += 1
+    return shuffled
+
+
 def _seeded_quiz(db: Session, concept_id: int) -> QuizOut:
-    exercises = db.scalars(
-        select(Exercise).where(Exercise.concept_id == concept_id).order_by(Exercise.id)
-    ).all()[:NUM_QUESTIONS]
+    pool = db.scalars(
+        select(Exercise).where(Exercise.concept_id == concept_id)
+    ).all()
+    # Pick a random subset and shuffle each question's options, so two students don't
+    # get the same questions in the same order.
+    chosen = random.sample(pool, min(NUM_QUESTIONS, len(pool)))
     questions = [
         QuizQuestionOut(
             id=ex.id,
             type=ex.type.value,
             difficulty=ex.difficulty.value,
             prompt=ex.prompt,
-            options=ex.options_json,
+            options=_shuffle_options(ex.options_json, ex.type.value, ex.correct_answer_json),
         )
-        for ex in exercises
+        for ex in chosen
     ]
     return QuizOut(concept_id=concept_id, source="seeded_fallback", questions=questions)
 
@@ -120,7 +140,9 @@ def generate_quiz(
                 type=q.get("type", "mcq"),
                 difficulty=q.get("difficulty", "medium"),
                 prompt=q.get("prompt", ""),
-                options=q.get("options"),
+                options=_shuffle_options(
+                    q.get("options"), q.get("type", "mcq"), q.get("correct_answer")
+                ),
             )
         )
     if not questions:
