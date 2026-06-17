@@ -1,7 +1,7 @@
 # Convenience targets for the Brainiacs AI demo.
 # These assume a Python venv at api/.venv and a running PostgreSQL.
 
-.PHONY: help api-install migrate seed api web-install web notebook
+.PHONY: help api-install migrate seed content api web-install web notebook
 
 help:
 	@echo "Targets:"
@@ -20,8 +20,10 @@ api-install:
 migrate:
 	cd api && .venv/bin/alembic upgrade head
 
-seed:
-	cd api && .venv/bin/python -m app.seed
+seed: content    ## alias — load curriculum from content/*.md
+
+content:    ## load human-authored curriculum (content/*.md) into the DB
+	cd api && .venv/bin/python -m app.content_loader
 
 api:
 	cd api && .venv/bin/uvicorn app.main:app --reload --port 8000
