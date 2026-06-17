@@ -1,6 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Flowchart from "./Flowchart";
 
 // react-markdown wrapper that renders ```flowchart blocks (JSON {nodes, edges}) as
@@ -36,5 +37,9 @@ const components = {
 };
 
 export default function Markdown({ children }) {
-  return <ReactMarkdown components={components}>{children}</ReactMarkdown>;
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      {children}
+    </ReactMarkdown>
+  );
 }
