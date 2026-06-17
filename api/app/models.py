@@ -98,6 +98,8 @@ class Exercise(Base):
     options_json: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
     correct_answer_json: Mapped[dict | list | str] = mapped_column(JSONB)
     target_misconception: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Human-authored scaffolded explanation (names the misconception, not the full answer).
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     concept: Mapped["Concept"] = relationship(back_populates="exercises")
 

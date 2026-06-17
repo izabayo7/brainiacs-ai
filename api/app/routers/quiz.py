@@ -128,8 +128,8 @@ def generate_quiz(
     return QuizOut(concept_id=concept_id, source="llm", questions=questions)
 
 
-def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | None]:
-    """Return (prompt, reference_answer, target_misconception) for a question id."""
+def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | None, str | None]:
+    """Return (prompt, reference_answer, target_misconception, authored_explanation)."""
     if question_id < 0:
         cached = _reference_cache.get(question_id)
         if cached is None:
@@ -137,12 +137,13 @@ def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | No
                 status_code=400,
                 detail="Generated question expired; regenerate the quiz",
             )
-        # Generated questions carry no pre-authored target misconception.
-        return cached["prompt"], cached["reference_answer"], None
+        # Generated questions carry no pre-authored misconception/explanation.
+        return cached["prompt"], cached["reference_answer"], None, None
     exercise = db.get(Exercise, question_id)
     if exercise is None:
         raise HTTPException(status_code=404, detail=f"Exercise {question_id} not found")
-    return exercise.prompt, exercise.correct_answer_json, exercise.target_misconception
+    return (exercise.prompt, exercise.correct_answer_json,
+            exercise.target_misconception, exercise.explanation)
 
 
 @router.post("/{concept_id}/submit", response_model=QuizResultOut)
@@ -182,7 +183,9 @@ def submit_quiz(
 
     graded: list[GradedAnswerOut] = []
     for ans in payload.answers:
-        prompt, reference, target_misconception = _reference_for(db, ans.question_id)
+        prompt, reference, target_misconception, authored_explanation = _reference_for(
+            db, ans.question_id
+        )
         if ans.reference_answer is not None:
             reference = ans.reference_answer  # client-supplied override (generated qs)
 
@@ -199,7 +202,10 @@ def submit_quiz(
 
         # Scaffolded explanation for wrong answers (don't reveal the full answer).
         if not is_correct:
-            if client is not None:
+            if authored_explanation and client is None:
+                # Prefer the human-authored explanation for seeded exercises offline.
+                explanation = authored_explanation
+            elif client is not None:
                 try:
                     explanation = client.explain(
                         misconception_label=misconception,
