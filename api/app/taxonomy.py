@@ -18,6 +18,8 @@ MISCONCEPTION_LABELS: list[str] = [
     "array_index_value_confusion",  # index vs value; 0- vs 1-based indexing
     "boolean_logic_error",          # wrong boolean / comparison logic
     "algorithm_sequencing_error",   # wrong order of steps; comparison-swap mechanics
+    "type_confusion",               # confuses data types (e.g. number vs text "5")
+    "tracing_error",                # mis-traces step-by-step execution / hand-tracing
     "none",                         # answer correct, no misconception
 ]
 
