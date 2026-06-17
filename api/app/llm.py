@@ -37,6 +37,10 @@ class LLMClient(ABC):
     def explain(self, misconception_label: str, concept: dict, student_answer: Any) -> str:
         """Return a short scaffolded explanation that does not give away the answer."""
 
+    @abstractmethod
+    def ask_tutor(self, concept: dict, chapter_body: str, question: str) -> str:
+        """Answer a lesson-scoped concept question with hints, not full solutions."""
+
 
 # --- Prompt fragments ---------------------------------------------------------
 
@@ -54,6 +58,15 @@ _GRADE_SYSTEM = (
     "execute code; you reason about the student's conceptual/pseudocode answer "
     "against the reference answer and rubric. You must classify the underlying "
     "misconception using ONLY the provided fixed taxonomy."
+)
+
+_TUTOR_SYSTEM = (
+    "You are a warm, patient tutor for absolute beginners in an introductory "
+    "PSEUDOCODE-ONLY programming course. Answer the student's question about the "
+    "current lesson concisely (2–5 sentences), in plain language. Use hints and "
+    "intuition; do NOT solve their exercises or hand over full answers. If the "
+    "question is off-topic for this lesson, gently steer back. Use only simple "
+    "pseudocode if you must show any."
 )
 
 
@@ -168,6 +181,19 @@ Write a SHORT (2-4 sentence), encouraging, scaffolded explanation that helps the
 student see their misconception and nudges them toward the right idea. Do NOT hand
 over the full correct answer. Plain prose only."""
         return self._complete(_GRADE_SYSTEM, user, max_tokens=300).strip()
+
+    def ask_tutor(self, concept: dict, chapter_body: str, question: str) -> str:
+        user = f"""Lesson: {concept.get('name')}
+
+LESSON CONTENT (your only source of truth):
+\"\"\"
+{chapter_body}
+\"\"\"
+
+Student's question: {question}
+
+Answer it briefly, with hints — do not solve their exercises."""
+        return self._complete(_TUTOR_SYSTEM, user, max_tokens=400).strip()
 
 
 def get_llm_client() -> LLMClient:

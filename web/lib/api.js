@@ -36,6 +36,8 @@ export const api = {
   // authenticated
   listConcepts: () => request("/concepts"),
   getConcept: (conceptId) => request(`/concepts/${conceptId}`),
+  askTutor: (conceptId, question) =>
+    request(`/concepts/${conceptId}/ask`, { method: "POST", body: JSON.stringify({ question }) }),
   getProgress: () => request("/progress"),
   generateQuiz: (conceptId) => request(`/quiz/${conceptId}/generate`, { method: "POST" }),
   submitQuiz: (conceptId, payload) =>

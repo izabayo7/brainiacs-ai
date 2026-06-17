@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { api } from "@/lib/api";
+import AskTutor from "@/components/AskTutor";
 
 export default function ConceptPage() {
   const { id } = useParams();
@@ -78,7 +79,7 @@ export default function ConceptPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_21rem]">
         {/* Main column — the lesson */}
         <div className="space-y-6">
           <div className="card p-6">
@@ -93,7 +94,7 @@ export default function ConceptPage() {
         </div>
 
         {/* Sidebar */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="card p-5">
             <h3 className="font-semibold">This lesson</h3>
             <ul className="mt-3 space-y-2 text-sm text-body">
@@ -112,6 +113,8 @@ export default function ConceptPage() {
               AI-generated, so it can't be memorised.
             </p>
           </div>
+
+          <AskTutor conceptId={concept.id} conceptName={concept.name} />
         </aside>
       </div>
     </div>

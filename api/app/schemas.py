@@ -35,6 +35,15 @@ class ChapterOut(BaseModel):
     video_url: str | None = None
 
 
+class AskTutorIn(BaseModel):
+    question: str
+
+
+class AskTutorOut(BaseModel):
+    answer: str
+    model: str  # which model actually answered (honest), e.g. the Claude model id
+
+
 class ConceptDetailOut(BaseModel):
     id: int
     slug: str
