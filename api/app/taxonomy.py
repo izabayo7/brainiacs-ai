@@ -20,6 +20,7 @@ MISCONCEPTION_LABELS: list[str] = [
     "algorithm_sequencing_error",   # wrong order of steps; comparison-swap mechanics
     "type_confusion",               # confuses data types (e.g. number vs text "5")
     "tracing_error",                # mis-traces step-by-step execution / hand-tracing
+    "conditional_flow_error",       # misreads which IF/ELSE branch runs (control flow)
     "none",                         # answer correct, no misconception
 ]
 

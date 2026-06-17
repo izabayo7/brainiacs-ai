@@ -66,6 +66,7 @@ _SCAFFOLDS = {
     "algorithm_sequencing_error": "Look again at the order of the steps — does each step have what it needs by the time it runs?",
     "type_confusion": "Check the data type: a number like 5 behaves differently from the text \"5\".",
     "tracing_error": "Trace it line by line, tracking each value as it changes — don't jump ahead.",
+    "conditional_flow_error": "Check the condition first, then follow only the branch that matches — not both.",
     "none": "Almost — compare your answer carefully against the reference.",
 }
 
