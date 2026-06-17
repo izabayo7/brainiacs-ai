@@ -91,7 +91,9 @@ def parse_file(path: Path) -> dict:
     worked = secs.get("Worked example", "").strip()
     key_ideas = secs.get("Key ideas", "").strip()
 
-    parts = [f"## {meta.get('name', path.stem)}", explanation]
+    # The page already shows the concept title, so the lesson body starts at the
+    # explanation (no repeated heading).
+    parts = [explanation]
     if worked:
         parts += ["### Worked example", worked]
     if key_ideas:
@@ -246,6 +248,7 @@ def _load_into_db(lessons: list[dict]) -> None:
         for c in lessons:
             concept = Concept(
                 slug=c["slug"], name=c["name"], order_hint=c["order"],
+                summary=c["summary"] or "",
                 explanation_md=c["explanation_md"], worked_example_md=c["worked_example_md"],
             )
             db.add(concept); db.flush()

@@ -60,90 +60,34 @@ export default function ConceptPage() {
         </p>
       )}
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">{concept.name}</h1>
-      <div className="prose-chapter mt-2 max-w-2xl">
-        <ReactMarkdown>{concept.explanation_md}</ReactMarkdown>
-      </div>
+      {concept.summary && (
+        <p className="mt-2 max-w-2xl text-body">{concept.summary}</p>
+      )}
 
-      {/* Tutor note */}
+      {/* Study tip */}
       <div className="mt-6 flex gap-3 rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
         <span className="step-badge mt-0.5 bg-brand-600 text-white">+</span>
         <div>
           <p className="text-sm text-ink">
-            <span className="font-semibold">Tutor note for you:</span> read the idea, then
-            trace the worked example yourself before the quiz — that's where mastery moves.
+            <span className="font-semibold">Tip:</span> read the idea, then trace the worked
+            example yourself before the quiz — that's where mastery moves.
           </p>
           <p className="mt-0.5 font-mono text-xs text-slate-400">
-            from your learner model · updates as you practice
+            a study tip for this lesson
           </p>
         </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_18rem]">
-        {/* Main column */}
+        {/* Main column — the lesson */}
         <div className="space-y-6">
-          {/* Watch card */}
-          <div className="card overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-line px-5 py-3">
-              <span className="step-badge">1</span>
-              <span className="font-semibold">Watch or read</span>
-            </div>
-            <div className="relative grid h-56 place-items-center bg-gradient-to-br from-slate-900 to-brand-700 text-white">
-              <div className="grid h-14 w-14 place-items-center rounded-full bg-white/15 backdrop-blur">
-                <svg className="h-6 w-6 translate-x-0.5" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z" /></svg>
-              </div>
-              <p className="absolute bottom-5 font-mono text-xs text-white/70">
-                {concept.name}, explained · curated by your instructor
-              </p>
-            </div>
-            {chapter?.video_url ? null : (
-              <p className="px-5 py-3 text-xs text-slate-400">
-                Read the notes below — no data needed to start.
-              </p>
-            )}
-          </div>
-
-          {/* Lesson body */}
           <div className="card p-6">
-            <div className="mb-3 flex items-center gap-3">
-              <span className="step-badge">2</span>
-              <span className="font-semibold">The idea, with a worked example</span>
-            </div>
             <div className="prose-chapter">
               {chapter ? (
                 <ReactMarkdown>{chapter.body_md}</ReactMarkdown>
               ) : (
                 <ReactMarkdown>{concept.worked_example_md}</ReactMarkdown>
               )}
-            </div>
-          </div>
-
-          {/* Ask the tutor */}
-          <div className="card p-6">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="step-badge bg-brand-600 text-white">+</span>
-                <span className="font-semibold">Ask the tutor</span>
-              </div>
-              <span className="font-mono text-xs text-slate-400">Qwen3.5-4B · self-hosted</span>
-            </div>
-            <p className="text-sm text-body">
-              Scoped to this lesson — concept questions only. The tutor won't solve
-              exercises here; that happens in the quiz, where it can see your attempt.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["Give me a smaller example", "Where do people usually slip?"].map((q) => (
-                <span key={q} className="rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-700">
-                  {q}
-                </span>
-              ))}
-            </div>
-            <div className="mt-3 flex gap-2">
-              <input
-                disabled
-                placeholder={`Ask anything about ${concept.name.toLowerCase()}…`}
-                className="flex-1 rounded-xl border border-line px-3.5 py-2.5 text-sm"
-              />
-              <button className="rounded-xl bg-brand-600 px-5 font-medium text-white">Ask</button>
             </div>
           </div>
         </div>

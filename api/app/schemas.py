@@ -39,6 +39,7 @@ class ConceptDetailOut(BaseModel):
     id: int
     slug: str
     name: str
+    summary: str = ""
     explanation_md: str
     worked_example_md: str
     state: ConceptState

@@ -45,6 +45,7 @@ class Concept(Base):
     slug: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(128))
     order_hint: Mapped[int] = mapped_column(Integer, default=0)
+    summary: Mapped[str] = mapped_column(Text, default="", server_default="")  # one-line lead
     explanation_md: Mapped[str] = mapped_column(Text, default="")
     worked_example_md: Mapped[str] = mapped_column(Text, default="")
 

@@ -58,6 +58,7 @@ def get_concept(
         id=concept.id,
         slug=concept.slug,
         name=concept.name,
+        summary=concept.summary or "",
         explanation_md=concept.explanation_md,
         worked_example_md=concept.worked_example_md,
         state=state,
