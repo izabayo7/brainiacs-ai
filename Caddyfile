@@ -1,0 +1,12 @@
+# Caddy automatically provisions HTTPS (Let's Encrypt) for both hostnames.
+# Point DNS A records for APP_DOMAIN and API_DOMAIN at the VM, then `docker compose up -d`.
+
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

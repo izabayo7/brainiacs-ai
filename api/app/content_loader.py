@@ -130,7 +130,18 @@ def parse_file(path: Path) -> dict:
     }
 
 
-def load(content_dir: Path | None = None) -> None:
+def load(content_dir: Path | None = None, if_empty: bool = False) -> None:
+    # On container boot we pass if_empty=True so restarts don't wipe student progress.
+    if if_empty:
+        db = SessionLocal()
+        try:
+            from app.models import Concept as _C  # local import to avoid cycle at top
+            if db.query(_C).first() is not None:
+                print("Content already present; skipping load (--if-empty).")
+                return
+        finally:
+            db.close()
+
     content_dir = content_dir or _content_dir()
     # Concept files are named "<order>-<slug>.md"; skip README and other docs.
     files = sorted(f for f in content_dir.glob("*.md") if re.match(r"\d+-", f.name))
@@ -192,4 +203,6 @@ def load(content_dir: Path | None = None) -> None:
 
 
 if __name__ == "__main__":
-    load()
+    import sys
+
+    load(if_empty="--if-empty" in sys.argv)

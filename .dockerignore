@@ -1,0 +1,18 @@
+# Keep the build context small (context is the repo root).
+**/.venv
+**/.venv-kt
+**/node_modules
+**/.next
+.git
+.local
+.claude
+ml/data
+ml/figures
+**/__pycache__
+**/*.pyc
+docs
+*.md
+!content/*.md
+.env
+*.env
+**/.env.local

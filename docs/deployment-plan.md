@@ -1,78 +1,62 @@
 # Deployment Plan — Brainiacs AI
 
-This describes how the demo is taken to a deployed environment. It is the
-**documented target**, not necessarily executed for this initial submission.
+Target: a **StrangeCloud** (cloud.strettch.com) VM running **Docker** with **Caddy** as
+the reverse proxy (automatic HTTPS). The whole stack is defined in
+[`docker-compose.yml`](../docker-compose.yml).
 
-## Target
-
-A single **cloud.strettch.com** VM running Docker, with **Nginx** as a reverse
-proxy in front of the FastAPI backend and the Next.js frontend, and a managed (or
-containerised) **PostgreSQL**.
+## Architecture
 
 ```
-                     ┌──────────────────────── VM (cloud.strettch.com) ───────────────────────┐
-   Internet  ──443──▶│  Nginx (TLS, reverse proxy)                                             │
-                     │     ├── /            ──▶  web   (Next.js, :3000)                         │
-                     │     └── /api, /docs  ──▶  api   (FastAPI/uvicorn, :8000)                 │
-                     │                                   └──▶ postgres (:5432, private network) │
-                     └────────────────────────────────────────────────────────────────────────┘
+                 ┌──────────────── StrangeCloud VM ─────────────────┐
+  Internet ─443─▶│  Caddy (auto-HTTPS)                              │
+                 │    APP_DOMAIN      ──▶  web  (Next.js, :3000)     │
+                 │    API_DOMAIN      ──▶  api  (FastAPI, :8000)     │
+                 │                              └──▶ db (postgres)   │
+                 └──────────────────────────────────────────────────┘
 ```
 
-## Containerisation
+Two hostnames (e.g. `brainiacs.example.com` and `api.brainiacs.example.com`) keep the
+web app and API on separate origins, so NextAuth's own `/api/auth/*` routes never clash
+with the backend.
 
-Three services via `docker-compose`:
+## Services (docker-compose)
+- **db** — `postgres:16`, data on a named volume.
+- **api** — built from [`api/Dockerfile`](../api/Dockerfile). On start
+  ([`api/entrypoint.sh`](../api/entrypoint.sh)) it waits for the DB, runs
+  `alembic upgrade head`, loads the curriculum once (`content_loader --if-empty`, so
+  restarts don't wipe progress), then serves uvicorn.
+- **web** — built from [`web/Dockerfile`](../web/Dockerfile) (Next.js standalone). The
+  public API URL is baked at build time via the `NEXT_PUBLIC_API_BASE_URL` build arg.
+- **caddy** — terminates TLS and reverse-proxies the two domains
+  ([`Caddyfile`](../Caddyfile)).
 
-- **db** — `postgres:16`, named volume for data, not exposed publicly.
-- **api** — built from `api/`, runs `alembic upgrade head` on start, then
-  `uvicorn app.main:app --host 0.0.0.0 --port 8000`. Reads `DATABASE_URL` and
-  `ANTHROPIC_API_KEY` from the environment.
-- **web** — built from `web/` (`next build` → `next start`), reads
-  `NEXT_PUBLIC_API_BASE_URL` (pointing at the public `/api` path).
+## Deploy steps (on the VM)
+1. Install Docker + the compose plugin.
+2. Point DNS **A records** for `APP_DOMAIN` and `API_DOMAIN` at the VM's IP.
+3. Clone the repo; `cp .env.deploy.example .env` and fill it in (domains, secrets,
+   Google OAuth creds, optional `ANTHROPIC_API_KEY`).
+4. In Google Cloud, add the redirect URI `https://APP_DOMAIN/api/auth/callback/google`.
+5. `docker compose up -d --build`.
+6. Caddy provisions HTTPS automatically. Visit `https://APP_DOMAIN`.
 
-> Dockerfiles are intentionally not added in this initial submission to keep the
-> repo lean; the build steps above mirror the local `make` targets exactly.
+## Environment / secrets
+All config is env-driven ([`.env.deploy.example`](../.env.deploy.example)); nothing is
+baked into images except the public API URL. `JWT_SECRET`, `NEXTAUTH_SECRET`, and
+`AUTH_SYNC_SECRET` must be strong random values; `AUTH_SYNC_SECRET` must match between
+`web` and `api`.
 
-## Reverse proxy (Nginx)
+## Migrations & content
+Schema changes ship as Alembic revisions and run on container start. Curriculum lives in
+[`content/`](../content) as markdown and is imported into the DB by the loader.
 
-- Terminate TLS (Let's Encrypt / certbot).
-- `location /` → `web` upstream (`proxy_pass http://web:3000`).
-- `location /api/` and `location /docs` → `api` upstream (`proxy_pass http://api:8000/`).
-- Set `proxy_set_header Host`, `X-Forwarded-For`, `X-Forwarded-Proto`.
+## Verification (deployment is tested, not just planned)
+Both images were built and run locally: the **api** container migrates, loads content,
+and serves authenticated endpoints; the **web** container serves the app and NextAuth.
+On the VM, verify by signing in and completing a quiz over HTTPS.
 
-## Migrations
-
-Schema changes ship as **Alembic** revisions. On deploy, the `api` container runs
-`alembic upgrade head` before serving. Seed content is loaded once with
-`python -m app.seed` (or a one-off `docker compose run api python -m app.seed`).
-
-## Environment / secrets management
-
-- No secrets in the image or repo. `.env` is git-ignored; `.env.example` documents
-  the variables.
-- On the VM, secrets are provided via the orchestrator's env/secret mechanism
-  (compose `env_file`, or the platform's secret store): `ANTHROPIC_API_KEY`,
-  `DATABASE_URL`, `NEXT_PUBLIC_API_BASE_URL`.
-- Rotate `ANTHROPIC_API_KEY` independently of deploys.
-
-## The model swap: API → self-hosted Qwen3.5-4B
-
-The demo calls the **Anthropic API** behind the `LLMClient` seam
-([`api/app/llm.py`](../api/app/llm.py)). Production does **not** call a paid API:
-
-1. Fine-tune **Qwen3.5-4B** on real, annotated pilot data (the experiment scaffolded
-   in the ML notebook).
-2. Serve it on the VM (or a GPU node) behind an OpenAI-compatible endpoint
-   (e.g. vLLM / TGI).
-3. Add a `QwenClient(LLMClient)` implementing `generate_quiz`,
-   `grade_and_classify`, and `explain` against that endpoint.
-4. Switch the factory `get_llm_client()` via a config flag. **No other code
-   changes** — routers, schemas, BKT, and the frontend are untouched.
-
-This is the entire point of the `LLMClient` abstraction: the production model is a
-drop-in replacement for the demo's API client.
-
-## Operational notes
-
-- Health check: `GET /health` on the api service.
-- Backups: scheduled `pg_dump` of the `db` volume.
-- Logs: uvicorn + Nginx access/error logs shipped to the platform's log store.
+## Production model swap
+LLM calls sit behind the `LLMClient` interface ([`api/app/llm.py`](../api/app/llm.py)).
+Demo uses the Anthropic API; the production plan is a self-hosted fine-tuned **Qwen**
+served behind an OpenAI-compatible endpoint — implement one `QwenClient(LLMClient)` and
+switch the factory; nothing else changes. With no key set, the app falls back to seeded
+quizzes + a deterministic offline grader, so it runs without paid API calls.
