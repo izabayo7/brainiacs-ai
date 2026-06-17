@@ -101,6 +101,11 @@ class Exercise(Base):
     target_misconception: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Human-authored scaffolded explanation (names the misconception, not the full answer).
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Optional flowchart shown above the prompt ({nodes, edges}).
+    prompt_diagram: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # "text" (default) or "flowchart" — for pseudocode_order, whether options are
+    # plain strings or {shape, text} boxes.
+    answer_format: Mapped[str] = mapped_column(String(16), default="text", server_default="text")
 
     concept: Mapped["Concept"] = relationship(back_populates="exercises")
 

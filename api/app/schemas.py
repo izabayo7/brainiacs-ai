@@ -109,7 +109,10 @@ class QuizQuestionOut(BaseModel):
     type: Literal["mcq", "predict_output", "pseudocode_order"]
     difficulty: Literal["easy", "medium", "hard"]
     prompt: str
-    options: list[str] | None = None
+    # plain strings, or {shape, text} boxes when answer_format == "flowchart"
+    options: list[Any] | None = None
+    prompt_diagram: dict | None = None       # flowchart shown above the prompt
+    answer_format: str = "text"              # "text" | "flowchart" (ordering questions)
     # correct_answer is intentionally omitted from the student-facing payload.
 
 

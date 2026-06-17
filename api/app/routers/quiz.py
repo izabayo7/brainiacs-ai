@@ -87,6 +87,8 @@ def _seeded_quiz(db: Session, concept_id: int) -> QuizOut:
             difficulty=ex.difficulty.value,
             prompt=ex.prompt,
             options=_shuffle_options(ex.options_json, ex.type.value, ex.correct_answer_json),
+            prompt_diagram=ex.prompt_diagram,
+            answer_format=ex.answer_format or "text",
         )
         for ex in chosen
     ]
@@ -143,6 +145,8 @@ def generate_quiz(
                 options=_shuffle_options(
                     q.get("options"), q.get("type", "mcq"), q.get("correct_answer")
                 ),
+                prompt_diagram=q.get("prompt_diagram"),
+                answer_format=q.get("format", "text") or "text",
             )
         )
     if not questions:

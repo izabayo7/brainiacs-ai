@@ -41,7 +41,38 @@ from app.taxonomy import MISCONCEPTION_SET
 
 VALID_TYPES = {"mcq", "predict_output", "pseudocode_order"}
 VALID_DIFFICULTY = {"easy", "medium", "hard"}
+FLOWCHART_SHAPES = {"terminal", "io", "process", "decision", "connector"}
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _flowchart_errors(spec, where: str) -> list[str]:
+    """Validate a flowchart spec {nodes, edges}: shapes in the enum and every edge
+    endpoint references an existing node id."""
+    errs: list[str] = []
+    if not isinstance(spec, dict) or not isinstance(spec.get("nodes"), list):
+        return [f"{where}: flowchart must be an object with a 'nodes' list"]
+    ids = set()
+    for n in spec["nodes"]:
+        if not isinstance(n, dict) or "id" not in n:
+            errs.append(f"{where}: flowchart node missing 'id'"); continue
+        ids.add(n["id"])
+        if n.get("shape") not in FLOWCHART_SHAPES:
+            errs.append(f"{where}: node '{n['id']}' has invalid shape '{n.get('shape')}'")
+    for e in spec.get("edges", []) or []:
+        if not isinstance(e, dict) or e.get("from") not in ids or e.get("to") not in ids:
+            errs.append(f"{where}: edge {e} references a node id that doesn't exist")
+    return errs
+
+
+def _extract_flowcharts(text: str) -> list:
+    """Parse every ```flowchart JSON block found in a markdown section."""
+    out = []
+    for m in re.finditer(r"```flowchart\n(.*?)```", text or "", re.DOTALL):
+        try:
+            out.append(("ok", yaml.safe_load(m.group(1))))  # JSON is valid YAML
+        except Exception as exc:  # noqa: BLE001
+            out.append(("error", str(exc)))
+    return out
 
 
 # --- locate content ----------------------------------------------------------
@@ -116,6 +147,7 @@ def parse_file(path: Path) -> dict:
         "video_url": meta.get("video_url"),
         "exercises": _exercises_from(secs.get("Exercises", "")),
         "has_sections": {k: (k in secs) for k in ("Explanation", "Worked example", "Key ideas")},
+        "flowcharts": _extract_flowcharts(explanation) + _extract_flowcharts(worked),
     }
 
 
@@ -157,6 +189,12 @@ def validate(lessons: list[dict]) -> tuple[list[str], list[str]]:
                 errors.append(f"{f}: missing '## {sec}' section")
         if not L["worked_has_pseudocode"]:
             errors.append(f"{f}: '## Worked example' must contain a ```pseudocode block")
+        # 6b. lesson flowchart blocks
+        for status, spec in L["flowcharts"]:
+            if status == "error":
+                errors.append(f"{f}: invalid ```flowchart JSON ({spec})")
+            else:
+                errors.extend(_flowchart_errors(spec, f"{f} flowchart"))
         # 7/8/9/10/11. exercises
         _validate_exercises(L, errors, warnings)
 
@@ -196,6 +234,9 @@ def _validate_exercises(L: dict, errors: list[str], warnings: list[str]) -> None
             errors.append(f"{where}: empty prompt")
         if not (ex.get("explanation") or "").strip():
             errors.append(f"{where}: empty explanation")
+        # Optional diagram shown above the prompt.
+        if ex.get("prompt_diagram") is not None:
+            errors.extend(_flowchart_errors(ex["prompt_diagram"], f"{where} prompt_diagram"))
         ca, opts = ex.get("correct_answer"), ex.get("options")
         if t == "mcq":
             if not isinstance(opts, list) or not (2 <= len(opts) <= 4):
@@ -205,6 +246,12 @@ def _validate_exercises(L: dict, errors: list[str], warnings: list[str]) -> None
         elif t == "pseudocode_order":
             if not isinstance(opts, list) or not isinstance(ca, list) or sorted(map(str, opts)) != sorted(map(str, ca)):
                 errors.append(f"{where}: pseudocode_order correct_answer must be a permutation of options")
+            elif ex.get("format") == "flowchart":
+                # Each orderable item must be a {shape, text} box.
+                for item in opts:
+                    if not isinstance(item, dict) or item.get("shape") not in FLOWCHART_SHAPES:
+                        errors.append(f"{where}: flowchart order items need a valid 'shape' and 'text'")
+                        break
         elif t == "predict_output":
             if not isinstance(ca, str) or not ca.strip():
                 errors.append(f"{where}: predict_output correct_answer must be a non-empty string")
@@ -320,6 +367,8 @@ def _load_into_db(lessons: list[dict]) -> None:
                 row.correct_answer_json = ex["correct_answer"]
                 row.target_misconception = ex.get("target_misconception")
                 row.explanation = ex.get("explanation")
+                row.prompt_diagram = ex.get("prompt_diagram")
+                row.answer_format = ex.get("format", "text") or "text"
                 n_ex += 1
             # Remove exercises whose prompt is gone (and their attempts).
             for prompt, row in existing_ex.items():

@@ -17,12 +17,19 @@ def _norm(value: object) -> str:
     return re.sub(r"\s+", " ", str(value).strip().lower())
 
 
+def _elem_eq(a: object, b: object) -> bool:
+    # Flowchart-ordering items are {shape, text}; compare both fields.
+    if isinstance(a, dict) and isinstance(b, dict):
+        return _norm(a.get("shape")) == _norm(b.get("shape")) and _norm(a.get("text")) == _norm(b.get("text"))
+    return _norm(a) == _norm(b)
+
+
 def _matches(reference: object, student: object) -> bool:
     # Ordering questions: compare the sequence element-by-element.
     if isinstance(reference, list):
         if not isinstance(student, list) or len(reference) != len(student):
             return False
-        return all(_norm(a) == _norm(b) for a, b in zip(reference, student))
+        return all(_elem_eq(a, b) for a, b in zip(reference, student))
     return _norm(reference) == _norm(student)
 
 
