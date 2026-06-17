@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 import yaml
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.db import Base, SessionLocal, engine
 from app.models import (
@@ -235,47 +235,100 @@ def _has_cycle(lessons: list[dict]) -> bool:
 
 # --- loader (idempotent reload) ----------------------------------------------
 
+def _delete_concept(db, concept: Concept) -> None:
+    """Remove a concept and everything hanging off it (used only when a slug is
+    dropped from the content folder)."""
+    cid = concept.id
+    ex_ids = [e.id for e in db.scalars(select(Exercise).where(Exercise.concept_id == cid)).all()]
+    if ex_ids:
+        db.execute(delete(Attempt).where(Attempt.exercise_id.in_(ex_ids)))
+    db.execute(delete(Exercise).where(Exercise.concept_id == cid))
+    db.execute(delete(Chapter).where(Chapter.concept_id == cid))
+    db.execute(delete(MasteryEstimate).where(MasteryEstimate.concept_id == cid))
+    db.execute(
+        delete(ConceptPrerequisite).where(
+            (ConceptPrerequisite.concept_id == cid)
+            | (ConceptPrerequisite.prerequisite_concept_id == cid)
+        )
+    )
+    db.delete(concept)
+
+
 def _load_into_db(lessons: list[dict]) -> None:
+    """Idempotent upsert. Concepts are keyed by slug and exercises by (concept, prompt),
+    so their ids stay stable across reloads — which means student progress
+    (mastery_estimate, keyed by concept_id) is PRESERVED. Re-running to add or edit a
+    chapter never resets anyone."""
     lessons = sorted(lessons, key=lambda c: c["order"])
     Base.metadata.create_all(engine)
     db = SessionLocal()
     try:
-        for model in (Attempt, MasteryEstimate, Exercise, Chapter, ConceptPrerequisite, Concept):
-            db.execute(delete(model))
-        db.commit()
+        content_slugs = {c["slug"] for c in lessons}
+        existing = {c.slug: c for c in db.scalars(select(Concept)).all()}
 
+        # Drop concepts that were removed from the content folder.
+        for slug, concept in existing.items():
+            if slug not in content_slugs:
+                _delete_concept(db, concept)
+        db.flush()
+        existing = {c.slug: c for c in db.scalars(select(Concept)).all()}
+
+        # Upsert each concept in place (id preserved → mastery preserved).
         slug_to_id: dict[str, int] = {}
         for c in lessons:
-            concept = Concept(
-                slug=c["slug"], name=c["name"], order_hint=c["order"],
-                summary=c["summary"] or "",
-                explanation_md=c["explanation_md"], worked_example_md=c["worked_example_md"],
-            )
-            db.add(concept); db.flush()
+            concept = existing.get(c["slug"])
+            if concept is None:
+                concept = Concept(slug=c["slug"])
+                db.add(concept)
+            concept.name = c["name"]
+            concept.order_hint = c["order"]
+            concept.summary = c["summary"] or ""
+            concept.explanation_md = c["explanation_md"]
+            concept.worked_example_md = c["worked_example_md"]
+            db.flush()
             slug_to_id[c["slug"]] = concept.id
+            # Chapters carry no progress, so replace them outright.
+            db.execute(delete(Chapter).where(Chapter.concept_id == concept.id))
             db.add(Chapter(concept_id=concept.id, title=f"{c['name']} — Chapter 1",
                            body_md=c["chapter_body"], video_url=c["video_url"]))
 
+        # Prerequisite edges carry no progress → rebuild them all.
+        db.execute(delete(ConceptPrerequisite))
         for c in lessons:
             for pre in c["prerequisites"]:
                 db.add(ConceptPrerequisite(concept_id=slug_to_id[c["slug"]],
                                            prerequisite_concept_id=slug_to_id[pre]))
 
+        # Upsert exercises by (concept_id, prompt) so attempts on unchanged items survive.
         n_ex = 0
         for c in lessons:
+            cid = slug_to_id[c["slug"]]
+            existing_ex = {
+                e.prompt: e
+                for e in db.scalars(select(Exercise).where(Exercise.concept_id == cid)).all()
+            }
+            new_prompts = set()
             for ex in c["exercises"]:
-                db.add(Exercise(
-                    concept_id=slug_to_id[c["slug"]],
-                    type=ExerciseType(ex["type"]),
-                    difficulty=Difficulty(ex.get("difficulty", "medium")),
-                    prompt=ex["prompt"], options_json=ex.get("options"),
-                    correct_answer_json=ex["correct_answer"],
-                    target_misconception=ex.get("target_misconception"),
-                    explanation=ex.get("explanation"),
-                ))
+                new_prompts.add(ex["prompt"])
+                row = existing_ex.get(ex["prompt"])
+                if row is None:
+                    row = Exercise(concept_id=cid, prompt=ex["prompt"])
+                    db.add(row)
+                row.type = ExerciseType(ex["type"])
+                row.difficulty = Difficulty(ex.get("difficulty", "medium"))
+                row.options_json = ex.get("options")
+                row.correct_answer_json = ex["correct_answer"]
+                row.target_misconception = ex.get("target_misconception")
+                row.explanation = ex.get("explanation")
                 n_ex += 1
+            # Remove exercises whose prompt is gone (and their attempts).
+            for prompt, row in existing_ex.items():
+                if prompt not in new_prompts:
+                    db.execute(delete(Attempt).where(Attempt.exercise_id == row.id))
+                    db.delete(row)
+
         db.commit()
-        print(f"Loaded {len(lessons)} concepts, {n_ex} exercises.")
+        print(f"Loaded {len(lessons)} concepts, {n_ex} exercises (progress preserved).")
     finally:
         db.close()
 
