@@ -191,18 +191,20 @@ function layout(nodes, edges) {
   const svgH = y - RANK_GAP + MARGIN;
 
   const pos = {};
+  const colRight = []; // rightmost edge of any node in each column, for gutter routing
   nodes.forEach((n) => {
     const w = nodeWidth(n);
     const h = nodeHeight(n);
     const cx = colCenter[col[n.id]];
     const cy = rankTop[rank[n.id]] + rankH[rank[n.id]] / 2;
     pos[n.id] = {
-      cx, cy, shape: n.shape,
+      cx, cy, shape: n.shape, rank: rank[n.id],
       top: cy - h / 2, bottom: cy + h / 2, left: cx - w / 2, right: cx + w / 2,
     };
+    colRight[col[n.id]] = Math.max(colRight[col[n.id]] ?? 0, cx + w / 2);
   });
 
-  return { pos, fout, forward, back, svgW, svgH, leftPad };
+  return { pos, fout, forward, back, svgW, svgH, leftPad, colRight, col };
 }
 
 export default function Flowchart({ spec }) {
@@ -233,7 +235,7 @@ export default function Flowchart({ spec }) {
     );
   }
 
-  const { pos, fout, forward, back, svgW, svgH, leftPad } = layout(nodes, edges);
+  const { pos, fout, forward, back, svgW, svgH, leftPad, colRight, col } = layout(nodes, edges);
 
   const forwardEdge = (e, i) => {
     const a = pos[e.from];
@@ -245,7 +247,15 @@ export default function Flowchart({ spec }) {
 
     let d;
     let label = null;
-    if (sameCol) {
+    if (fromDecision && idx > 0 && sameCol && b.rank > a.rank + 1) {
+      // A decision's second exit that rejoins the spine below an intervening node
+      // (e.g. an IF inside a loop: the "No" skips the if-body and lands on the
+      // merge). A straight line would cut through that node, so route out to a
+      // right-side gutter, down, and back into the target's right side.
+      const gutter = (colRight[col[e.from]] ?? a.right) + COL_GAP / 2;
+      d = `M ${a.right} ${a.cy} L ${gutter} ${a.cy} L ${gutter} ${b.cy} L ${b.right} ${b.cy}`;
+      if (e.label) label = { x: gutter, y: a.cy - 9, anchor: "middle", text: e.label };
+    } else if (sameCol) {
       d = `M ${a.cx} ${a.bottom} L ${b.cx} ${b.top}`;
       if (e.label) label = { x: a.cx + 10, y: (a.bottom + b.top) / 2, anchor: "start", text: e.label };
     } else if (fromDecision && idx > 0 && b.cx > a.cx) {

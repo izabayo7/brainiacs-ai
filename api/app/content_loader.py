@@ -46,21 +46,77 @@ SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def _flowchart_errors(spec, where: str) -> list[str]:
-    """Validate a flowchart spec {nodes, edges}: shapes in the enum and every edge
-    endpoint references an existing node id."""
+    """Validate a flowchart spec {nodes, edges}.
+
+    Beyond shape/endpoint checks we enforce that the graph is actually drawable as
+    a flowchart: exactly one entry, every node reachable from it, no non-terminal
+    dead ends, and each decision having two labelled exits. A renderer lays out by
+    edges, so a node nothing points to has no place to go and lands on top of the
+    start — which is exactly the bug a "looks fine in the file" diagram can hide.
+    """
     errs: list[str] = []
     if not isinstance(spec, dict) or not isinstance(spec.get("nodes"), list):
         return [f"{where}: flowchart must be an object with a 'nodes' list"]
+    nodes = spec["nodes"]
+    node_ids: list = []  # declaration order, so error messages are deterministic
     ids = set()
-    for n in spec["nodes"]:
+    shape_of: dict = {}
+    for n in nodes:
         if not isinstance(n, dict) or "id" not in n:
             errs.append(f"{where}: flowchart node missing 'id'"); continue
+        node_ids.append(n["id"])
         ids.add(n["id"])
+        shape_of[n["id"]] = n.get("shape")
         if n.get("shape") not in FLOWCHART_SHAPES:
             errs.append(f"{where}: node '{n['id']}' has invalid shape '{n.get('shape')}'")
-    for e in spec.get("edges", []) or []:
+
+    edges = spec.get("edges", []) or []
+    out_edges: dict = {nid: [] for nid in ids}
+    in_count: dict = {nid: 0 for nid in ids}
+    for e in edges:
         if not isinstance(e, dict) or e.get("from") not in ids or e.get("to") not in ids:
             errs.append(f"{where}: edge {e} references a node id that doesn't exist")
+            continue
+        out_edges[e["from"]].append(e)
+        in_count[e["to"]] += 1
+
+    # A single chart with one node and no edges is a legend; skip the graph checks.
+    if len(ids) <= 1 or not edges:
+        return errs
+
+    # Exactly one entry point (Start). A second node with no incoming edge — like a
+    # dangling End — is unreachable and would render detached.
+    sources = [nid for nid in node_ids if in_count[nid] == 0]
+    if not sources:
+        errs.append(f"{where}: flowchart has no start node (every node has an incoming edge — it's all a cycle)")
+    elif len(sources) > 1:
+        errs.append(f"{where}: flowchart has {len(sources)} unconnected entry nodes {sorted(sources)} — only the start should have no incoming edge")
+
+    # Every node must be reachable from the start. Prefer a terminal entry (Start),
+    # else the first declared source, so reachability is reported from the real root.
+    if sources:
+        start = next((nid for nid in sources if shape_of.get(nid) == "terminal"), sources[0])
+        seen = set()
+        stack = [start]
+        while stack:
+            cur = stack.pop()
+            if cur in seen:
+                continue
+            seen.add(cur)
+            stack.extend(e["to"] for e in out_edges[cur])
+        for nid in ids - seen:
+            errs.append(f"{where}: node '{nid}' is unreachable from the start")
+
+    # No dead ends, and decisions branch exactly two labelled ways.
+    for nid in ids:
+        outs = out_edges[nid]
+        if shape_of.get(nid) == "decision":
+            if len(outs) != 2:
+                errs.append(f"{where}: decision '{nid}' has {len(outs)} exits (must be exactly 2)")
+            if any(not e.get("label") for e in outs):
+                errs.append(f"{where}: decision '{nid}' has an unlabelled exit (each branch needs a label)")
+        elif shape_of.get(nid) != "terminal" and not outs:
+            errs.append(f"{where}: node '{nid}' is a dead end (no outgoing edge)")
     return errs
 
 
