@@ -1,5 +1,6 @@
-# Brainiacs AI — full stack for StrangeCloud (Docker + Caddy).
-# Copy .env.deploy.example -> .env and fill it in, then: docker compose up -d --build
+# Brainiacs AI — app stack (Docker Compose). Host nginx terminates TLS and reverse-proxies
+# APP_DOMAIN -> web (:3000) and API_DOMAIN -> api (:8000). See DEPLOY.md + deploy/nginx/.
+# The web + api ports bind to 127.0.0.1 so they're reachable only via nginx, not publicly.
 services:
   db:
     image: postgres:16
@@ -19,6 +20,8 @@ services:
       DATABASE_URL: postgresql+psycopg://brainiacs:${DB_PASSWORD:-brainiacs}@db:5432/brainiacs
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_ORIGIN: ${APP_URL}
+    ports:
+      - "127.0.0.1:8000:8000"
     depends_on:
       - db
     restart: unless-stopped
@@ -33,28 +36,11 @@ services:
       NEXTAUTH_URL: ${APP_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXT_PUBLIC_API_BASE_URL: ${API_URL}
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  caddy:
-    image: caddy:2
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN}
-      API_DOMAIN: ${API_DOMAIN}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:3000:3000"
     depends_on:
-      - web
       - api
     restart: unless-stopped
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
