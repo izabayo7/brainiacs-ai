@@ -35,15 +35,6 @@ class ChapterOut(BaseModel):
     video_url: str | None = None
 
 
-class AskTutorIn(BaseModel):
-    question: str
-
-
-class AskTutorOut(BaseModel):
-    answer: str
-    model: str  # which model actually answered (honest), e.g. the Claude model id
-
-
 class ConceptDetailOut(BaseModel):
     id: int
     slug: str
@@ -73,8 +64,6 @@ class UserOut(BaseModel):
     id: int
     name: str
     email: str
-    avatar_url: str | None = None
-    provider: str
 
 
 class RegisterIn(BaseModel):
@@ -86,12 +75,6 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: str
     password: str
-
-
-class GoogleSyncIn(BaseModel):
-    email: str
-    name: str
-    avatar_url: str | None = None
 
 
 class TokenOut(BaseModel):
@@ -118,7 +101,7 @@ class QuizQuestionOut(BaseModel):
 
 class QuizOut(BaseModel):
     concept_id: int
-    source: Literal["llm", "seeded_fallback"]
+    source: Literal["bank"]  # questions come from the seeded item bank (no external model)
     questions: list[QuizQuestionOut]
 
 
@@ -126,9 +109,6 @@ class AnswerIn(BaseModel):
     question_id: int
     type: Literal["mcq", "predict_output", "pseudocode_order"]
     prompt: str
-    # Reference answer travels with LLM-generated questions (negative ids) since
-    # they aren't in the DB; for seeded questions it's looked up server-side.
-    reference_answer: Any | None = None
     response: Any
 
 

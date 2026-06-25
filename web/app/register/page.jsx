@@ -51,16 +51,7 @@ export default function RegisterPage() {
           <h1 className="text-2xl font-semibold">Create your account</h1>
           <p className="mt-1 text-sm text-body">Start learning in a couple of minutes.</p>
 
-          <button type="button" onClick={() => signIn("google", { callbackUrl: "/welcome" })}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-white py-2.5 font-medium text-ink transition hover:bg-mist">
-            Continue with Google
-          </button>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-            <span className="h-px flex-1 bg-line" /> OR <span className="h-px flex-1 bg-line" />
-          </div>
-
-          <label className="block text-sm font-medium text-ink">Name</label>
+          <label className="mt-6 block text-sm font-medium text-ink">Name</label>
           <input required value={form.name} onChange={set("name")} placeholder="Your name"
             className="mt-1 w-full rounded-xl border border-line px-3.5 py-2.5 text-sm focus:border-brand-500 focus:outline-none" />
 

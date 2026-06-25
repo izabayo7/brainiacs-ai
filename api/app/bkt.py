@@ -8,7 +8,9 @@ state updated after each observed answer using four parameters:
     p_slip  : P(answers wrong | actually mastered)
     p_guess : P(answers right | not mastered)
 
-For this demo the standard textbook BKT equations are plenty — no RL, no tuning.
+The parameters are data-informed, not pulled from thin air — see the note below and
+ml/kt_evaluation.py, where a fitted BKT beats the score-gate baseline (AUC 0.715 vs
+0.696) on a leakage-safe split of ASSISTments.
 """
 from __future__ import annotations
 
@@ -18,11 +20,19 @@ from dataclasses import dataclass
 MASTERY_THRESHOLD = 0.85
 MIN_ATTEMPTS = 3
 
-# --- BKT parameters (reasonable defaults; could be fit per concept later) ---
-P_INIT = 0.20
-P_LEARN = 0.20
-P_SLIP = 0.10
-P_GUESS = 0.20
+# --- BKT parameters ---
+# Slip and guess (the observation-noise terms) are set to the MEDIAN of the per-concept
+# maximum-likelihood fits on ASSISTments (ml/kt_evaluation.py); these transfer reasonably
+# across domains. The prior and learn rate are NOT taken from ASSISTments: its learners
+# are not absolute beginners (fitted prior ~0.70) and its cadence differs, so we keep a
+# low beginner prior and a moderate learn rate suited to first-exposure pseudocode. Our
+# own in-domain pilot is currently too small and skewed (n=61, ~90% correct from early
+# testers) to fit a reliable prior; re-fitting all four from in-domain logs as the pilot
+# grows is future work.
+P_INIT = 0.20    # beginner prior: a first-time learner starts mostly unmastered
+P_LEARN = 0.20   # moderate per-attempt learning, suited to the quiz cadence
+P_SLIP = 0.22    # P(wrong | mastered) — ASSISTments per-concept MLE median
+P_GUESS = 0.26   # P(right | not mastered) — ASSISTments per-concept MLE median
 
 
 @dataclass

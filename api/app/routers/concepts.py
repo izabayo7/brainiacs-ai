@@ -6,11 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_student
-from app.config import settings
 from app.db import get_db
-from app.llm import get_llm_client
 from app.models import Chapter, Concept, Student
-from app.schemas import AskTutorIn, AskTutorOut, ChapterOut, ConceptDetailOut, ConceptStateOut
+from app.schemas import ChapterOut, ConceptDetailOut, ConceptStateOut
 from app.services import compute_states
 
 router = APIRouter(prefix="/concepts", tags=["concepts"])
@@ -66,40 +64,3 @@ def get_concept(
         state=state,
         chapters=[ChapterOut.model_validate(ch) for ch in chapters],
     )
-
-
-@router.post("/{concept_id}/ask", response_model=AskTutorOut)
-def ask_tutor(
-    concept_id: int,
-    payload: AskTutorIn,
-    current: Student = Depends(get_current_student),
-    db: Session = Depends(get_db),
-) -> AskTutorOut:
-    """Lesson-scoped tutor chat. Uses the configured LLM; honest about which model."""
-    concept = db.get(Concept, concept_id)
-    if concept is None:
-        raise HTTPException(status_code=404, detail="Concept not found")
-    question = payload.question.strip()
-    if not question:
-        raise HTTPException(status_code=400, detail="Ask a question first")
-
-    chapter = db.scalars(
-        select(Chapter).where(Chapter.concept_id == concept_id).order_by(Chapter.id)
-    ).first()
-    chapter_body = chapter.body_md if chapter else concept.explanation_md
-
-    try:
-        client = get_llm_client()
-    except Exception:  # noqa: BLE001 - no model configured in this environment
-        return AskTutorOut(
-            answer=(
-                "The AI tutor isn't enabled in this environment yet. In the meantime, "
-                "re-read the Key ideas above and try the quiz — it pinpoints exactly "
-                "what to review."
-            ),
-            model="not configured",
-        )
-    answer = client.ask_tutor(
-        concept={"name": concept.name}, chapter_body=chapter_body, question=question
-    )
-    return AskTutorOut(answer=answer, model=settings.anthropic_model)

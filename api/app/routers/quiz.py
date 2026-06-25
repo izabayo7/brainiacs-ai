@@ -1,16 +1,12 @@
-"""The AI loop: generate a per-student quiz, then grade + classify + explain.
+"""Quiz flow: serve a per-student quiz from the seeded bank, then grade
+deterministically, run the BKT update, persist attempts, recompute mastery + unlocks.
 
-Flow:
-  POST /quiz/{concept_id}/generate?student_id=...
-      -> LLM generates questions grounded in the chapter; on any failure we fall
-         back to the pre-seeded exercises so the demo is never empty.
-  POST /quiz/{concept_id}/submit
-      -> grade each answer, classify the misconception, write an explanation,
-         run the BKT update, persist attempts, recompute mastery + unlocks.
+No external model is involved: quizzes are drawn from the human-authored item bank
+(random subset + shuffled options) and grading is deterministic (see grading.py).
+This NEVER executes student input.
 """
 from __future__ import annotations
 
-import itertools
 import logging
 import random
 
@@ -22,17 +18,7 @@ from app.auth import get_current_student
 from app.bkt import is_mastered, update_mastery
 from app.db import get_db
 from app.grading import offline_explain, offline_grade_and_classify
-from app.llm import get_llm_client
-from app.models import (
-    Attempt,
-    Chapter,
-    Concept,
-    Difficulty,
-    Exercise,
-    ExerciseType,
-    MasteryEstimate,
-    Student,
-)
+from app.models import Attempt, Concept, Exercise, MasteryEstimate, Student
 from app.schemas import (
     GradedAnswerOut,
     QuizOut,
@@ -45,22 +31,13 @@ from app.services import compute_states, recommend_next_concept
 logger = logging.getLogger("brainiacs.quiz")
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
-# Ephemeral ids for freshly-generated (non-persisted) questions count down from -1.
-_ephemeral_ids = itertools.count(start=-1, step=-1)
-
-# In-memory map question_id -> reference_answer for generated questions, so the
-# correct answer is NOT shipped to the browser.
-# TODO: replace with a short-lived store (Redis / DB quiz row) before multi-worker
-# deployment — a module dict is per-process and lost on restart.
-_reference_cache: dict[int, dict] = {}
-
 NUM_QUESTIONS = 4
 
 
 def _shuffle_options(options, qtype: str, correct=None):
-    """Shuffle the displayed options so answer positions aren't shareable between
-    students ("pick option 2"). Grading compares the option TEXT, so reordering is
-    safe. For ordering questions, avoid presenting the lines already in the right order."""
+    """Shuffle displayed options so positions aren't shareable ("pick option 2").
+    Grading compares option TEXT, so reordering is safe. For ordering questions,
+    avoid presenting the lines already in the right order."""
     if not isinstance(options, list) or len(options) < 2:
         return options
     shuffled = list(options)
@@ -74,11 +51,9 @@ def _shuffle_options(options, qtype: str, correct=None):
 
 
 def _seeded_quiz(db: Session, concept_id: int) -> QuizOut:
-    pool = db.scalars(
-        select(Exercise).where(Exercise.concept_id == concept_id)
-    ).all()
-    # Pick a random subset and shuffle each question's options, so two students don't
-    # get the same questions in the same order.
+    pool = db.scalars(select(Exercise).where(Exercise.concept_id == concept_id)).all()
+    # Random subset + shuffled options, so two students don't get the same questions in
+    # the same order (anti-cheating).
     chosen = random.sample(pool, min(NUM_QUESTIONS, len(pool)))
     questions = [
         QuizQuestionOut(
@@ -92,7 +67,7 @@ def _seeded_quiz(db: Session, concept_id: int) -> QuizOut:
         )
         for ex in chosen
     ]
-    return QuizOut(concept_id=concept_id, source="seeded_fallback", questions=questions)
+    return QuizOut(concept_id=concept_id, source="bank", questions=questions)
 
 
 @router.post("/{concept_id}/generate", response_model=QuizOut)
@@ -104,67 +79,14 @@ def generate_quiz(
     concept = db.get(Concept, concept_id)
     if concept is None:
         raise HTTPException(status_code=404, detail="Concept not found")
-
     states = compute_states(db, current.id)
     if states[concept_id]["state"] == "locked":
         raise HTTPException(status_code=403, detail="Concept is locked")
-    student_mastery = states[concept_id]["p_mastered"]
-
-    chapter = db.scalars(
-        select(Chapter).where(Chapter.concept_id == concept_id).order_by(Chapter.id)
-    ).first()
-    chapter_body = chapter.body_md if chapter else concept.explanation_md
-
-    # Try the LLM; on ANY failure fall back to seeded exercises (demo must work).
-    try:
-        client = get_llm_client()
-        raw_questions = client.generate_quiz(
-            concept={"name": concept.name, "slug": concept.slug},
-            chapter_body=chapter_body,
-            student_mastery=student_mastery,
-            num_questions=NUM_QUESTIONS,
-        )
-    except Exception as exc:  # noqa: BLE001 - any failure -> graceful fallback
-        logger.warning("LLM quiz-gen failed (%s); using seeded fallback", exc)
-        return _seeded_quiz(db, concept_id)
-
-    questions: list[QuizQuestionOut] = []
-    for q in raw_questions:
-        qid = next(_ephemeral_ids)
-        _reference_cache[qid] = {
-            "prompt": q.get("prompt", ""),
-            "type": q.get("type", "mcq"),
-            "reference_answer": q.get("correct_answer"),
-        }
-        questions.append(
-            QuizQuestionOut(
-                id=qid,
-                type=q.get("type", "mcq"),
-                difficulty=q.get("difficulty", "medium"),
-                prompt=q.get("prompt", ""),
-                options=_shuffle_options(
-                    q.get("options"), q.get("type", "mcq"), q.get("correct_answer")
-                ),
-                prompt_diagram=q.get("prompt_diagram"),
-                answer_format=q.get("format", "text") or "text",
-            )
-        )
-    if not questions:
-        return _seeded_quiz(db, concept_id)
-    return QuizOut(concept_id=concept_id, source="llm", questions=questions)
+    return _seeded_quiz(db, concept_id)
 
 
 def _reference_for(db: Session, question_id: int) -> tuple[str, object, str | None, str | None]:
     """Return (prompt, reference_answer, target_misconception, authored_explanation)."""
-    if question_id < 0:
-        cached = _reference_cache.get(question_id)
-        if cached is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Generated question expired; regenerate the quiz",
-            )
-        # Generated questions carry no pre-authored misconception/explanation.
-        return cached["prompt"], cached["reference_answer"], None, None
     exercise = db.get(Exercise, question_id)
     if exercise is None:
         raise HTTPException(status_code=404, detail=f"Exercise {question_id} not found")
@@ -186,14 +108,6 @@ def submit_quiz(
     # Which concepts were already mastered, to compute what gets newly unlocked.
     before = compute_states(db, current.id)
 
-    # Use the LLM when configured; otherwise grade seeded answers deterministically
-    # so the demo runs with no API key (and stays deterministic for the video).
-    try:
-        client = get_llm_client()
-    except Exception as exc:  # noqa: BLE001 - no key / SDK -> offline grading
-        logger.info("No LLM client (%s); using offline grader", exc)
-        client = None
-
     # Load / create this student's mastery row for the concept.
     estimate = db.scalars(
         select(MasteryEstimate).where(
@@ -212,49 +126,27 @@ def submit_quiz(
         prompt, reference, target_misconception, authored_explanation = _reference_for(
             db, ans.question_id
         )
-        if ans.reference_answer is not None:
-            reference = ans.reference_answer  # client-supplied override (generated qs)
-
-        if client is not None:
-            result = client.grade_and_classify(
-                question=prompt, reference_answer=reference, student_answer=ans.response
-            )
-        else:
-            result = offline_grade_and_classify(reference, ans.response, target_misconception)
-
+        # Deterministic grading — no external model.
+        result = offline_grade_and_classify(reference, ans.response, target_misconception)
         is_correct = bool(result.get("is_correct"))
         misconception = result.get("misconception_label", "none")
         explanation = result.get("explanation", "")
 
-        # Scaffolded explanation for wrong answers (don't reveal the full answer).
+        # Scaffolded explanation for wrong answers: prefer the human-authored one,
+        # else a per-misconception hint. Never reveals the full answer.
         if not is_correct:
-            if authored_explanation and client is None:
-                # Prefer the human-authored explanation for seeded exercises offline.
-                explanation = authored_explanation
-            elif client is not None:
-                try:
-                    explanation = client.explain(
-                        misconception_label=misconception,
-                        concept={"name": concept.name},
-                        student_answer=ans.response,
-                    )
-                except Exception as exc:  # noqa: BLE001 - keep the grade even if explain fails
-                    logger.warning("explain() failed: %s", exc)
-            else:
-                explanation = offline_explain(misconception, concept.name)
+            explanation = authored_explanation or offline_explain(misconception, concept.name)
 
-        # Persist the attempt. Only seeded exercises (positive id) FK-link cleanly.
-        if ans.question_id > 0:
-            db.add(
-                Attempt(
-                    student_id=current.id,
-                    exercise_id=ans.question_id,
-                    response_json=ans.response,
-                    is_correct=is_correct,
-                    misconception_label=misconception,
-                    explanation_text=explanation,
-                )
+        db.add(
+            Attempt(
+                student_id=current.id,
+                exercise_id=ans.question_id,
+                response_json=ans.response,
+                is_correct=is_correct,
+                misconception_label=misconception,
+                explanation_text=explanation,
             )
+        )
 
         # BKT update per answer.
         step = update_mastery(estimate.p_mastered, estimate.attempts, is_correct)
@@ -275,7 +167,6 @@ def submit_quiz(
 
     # Recompute states to find newly-unlocked concepts.
     after = compute_states(db, current.id)
-    mastered_after = {cid for cid, info in after.items() if info["state"] == "mastered"}
     available_after = {cid for cid, info in after.items() if info["state"] == "available"}
     newly_unlocked_ids = available_after - {
         cid for cid, info in before.items() if info["state"] in ("available", "mastered")

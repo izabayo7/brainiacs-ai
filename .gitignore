@@ -59,3 +59,5 @@ ml/PRESENTATION_GUIDE.md
 
 # Local launch config (machine-specific)
 .claude/launch.json
+
+capstone-prep

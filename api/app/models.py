@@ -112,19 +112,17 @@ class Exercise(Base):
 
 class Student(Base):
     """A learner / authenticated user. (Kept named `student` since all progress FKs
-    reference student_id; functionally this is the app's user account.)"""
+    reference student_id; functionally this is the app's user account.)
+
+    Auth is email/password only — no external identity provider — so the system stays
+    fully self-hosted and data-sovereign (no learner identity leaves the box)."""
 
     __tablename__ = "student"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
-    # Auth fields. password_hash is null for OAuth (Google) accounts.
     password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    provider: Mapped[str] = mapped_column(
-        String(20), default="password", server_default="password"
-    )  # password | google
 
 
 class Attempt(Base):

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import AskTutor from "@/components/AskTutor";
 import Markdown from "@/components/Markdown";
 
 export default function ConceptPage() {
@@ -105,12 +104,11 @@ export default function ConceptPage() {
               Start quiz →
             </button>
             <p className="mt-3 text-xs leading-relaxed text-slate-400">
-              The lesson doesn't move your mastery bar — only the quiz does. Each quiz is
-              AI-generated, so it can't be memorised.
+              The lesson doesn't move your mastery bar — only the quiz does. Each quiz pulls
+              a random subset from a larger question bank and shuffles the options, so it
+              can't be memorised.
             </p>
           </div>
-
-          <AskTutor conceptId={concept.id} conceptName={concept.name} />
         </aside>
       </div>
     </div>

@@ -1,12 +1,11 @@
-"""Deterministic offline grader for SEEDED exercises.
+"""Deterministic grader for the seeded exercise bank.
 
-The production grading path is the LLM (see llm.py). But the demo must run with no
-ANTHROPIC_API_KEY: a reviewer clones, seeds, and clicks through without a key. For
-seeded exercises we already hold the reference answer, so we can grade by direct
-comparison and attribute the exercise's pre-authored target misconception when the
-answer is wrong. This keeps the video deterministic too.
+Grading is fully deterministic and self-hosted — no external model. For each seeded
+exercise we hold the reference answer, so we grade by direct comparison and attribute
+the exercise's pre-authored target misconception (a fixed taxonomy, not a trained
+classifier) when the answer is wrong. Grading is reproducible and needs no API keys.
 
-This still NEVER executes student code — it only compares answers.
+This NEVER executes student code — it only compares answers.
 """
 from __future__ import annotations
 

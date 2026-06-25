@@ -80,7 +80,7 @@ export default function QuizPage() {
       <div className="mb-6 flex items-center justify-between">
         <a href="/" className="text-sm text-slate-500 hover:text-brand-600">‹ Your path</a>
         <span className="rounded-full bg-brand-50 px-3 py-1 font-mono text-xs text-brand-700">
-          {quiz.source === "llm" ? "AI-generated for you" : "practice set"}
+          practice set
         </span>
       </div>
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Quick check</h1>

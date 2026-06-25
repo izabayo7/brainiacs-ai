@@ -2,7 +2,7 @@
 
 // Client for the FastAPI backend. Authenticated calls attach the backend JWT that
 // NextAuth stored in the session.
-import { getSession } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -14,6 +14,11 @@ async function request(path, { auth = true, ...options } = {}) {
   }
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
+    // Backend token expired/invalid: drop the stale session and send the user to
+    // login, rather than leaving them in a broken "signed in but can't load" state.
+    if (res.status === 401 && auth) {
+      await signOut({ callbackUrl: "/login" });
+    }
     let detail = res.statusText;
     try {
       detail = (await res.json()).detail || detail;
@@ -36,8 +41,6 @@ export const api = {
   // authenticated
   listConcepts: () => request("/concepts"),
   getConcept: (conceptId) => request(`/concepts/${conceptId}`),
-  askTutor: (conceptId, question) =>
-    request(`/concepts/${conceptId}/ask`, { method: "POST", body: JSON.stringify({ question }) }),
   getProgress: () => request("/progress"),
   generateQuiz: (conceptId) => request(`/quiz/${conceptId}/generate`, { method: "POST" }),
   submitQuiz: (conceptId, payload) =>
