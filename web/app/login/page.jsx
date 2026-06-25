@@ -23,11 +23,11 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Hero panel — real photo with a teal/emerald wash */}
+      {/* Hero panel — real photo with an indigo brand wash */}
       <div className="relative hidden overflow-hidden lg:block">
         <img src="/login-hero.jpg" alt="A learner studying programming"
           className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-teal-500/70 via-emerald-600/55 to-emerald-900/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-600/70 via-brand-700/70 to-ink/90" />
         <img src="/logo.svg" alt="Brainiacs AI"
           className="absolute left-8 top-8 h-9 w-auto [filter:brightness(0)_invert(1)]" />
         <p className="absolute bottom-12 left-8 right-12 text-2xl font-semibold leading-snug text-white drop-shadow">
