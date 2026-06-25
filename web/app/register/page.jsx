@@ -24,7 +24,7 @@ export default function RegisterPage() {
         password: form.password,
         redirect: false,
       });
-      if (res?.ok) router.push("/welcome");
+      if (res?.ok) router.push("/");
       else router.push("/login");
     } catch (err) {
       setError(err.message || "Could not create your account.");
