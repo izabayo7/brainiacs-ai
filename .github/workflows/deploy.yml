@@ -1,0 +1,30 @@
+name: Deploy to StrangeCloud
+
+# Push-to-deploy: every push or merged PR to main redeploys the app on the VM.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:          # also allow a manual run from the Actions tab
+
+concurrency:
+  group: production-deploy     # never run two deploys at once
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all --prune
+            git reset --hard origin/main          # match main exactly (.env is gitignored, untouched)
+            docker compose up -d --build           # rebuild + restart changed services
+            docker image prune -f                  # reclaim space from old image layers
