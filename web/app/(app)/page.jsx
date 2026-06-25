@@ -10,21 +10,24 @@ export default function Dashboard() {
   const router = useRouter();
   const { data: session } = useSession();
   const [concepts, setConcepts] = useState([]);
-  const [nextSlug, setNextSlug] = useState(null);
+  const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     Promise.all([api.listConcepts(), api.getProgress()])
-      .then(([cs, progress]) => {
+      .then(([cs, prog]) => {
         setConcepts(cs);
-        setNextSlug(progress.next_concept_slug);
+        setProgress(prog);
       })
       .catch((e) => setError(e.message));
   }, []);
 
   const nameById = Object.fromEntries(concepts.map((c) => [c.id, c.name]));
-  const nextConcept = concepts.find((c) => c.slug === nextSlug);
+  const nextConcept = concepts.find((c) => c.slug === progress?.next_concept_slug);
   const masteredCount = concepts.filter((c) => c.state === "mastered").length;
+  const avgMastery = concepts.length
+    ? Math.round((concepts.reduce((s, c) => s + (c.p_mastered || 0), 0) / concepts.length) * 100)
+    : 0;
   const firstName = (session?.user?.name || "").split(" ")[0];
 
   const openConcept = (concept) => router.push(`/concept/${concept.id}`);
@@ -56,8 +59,8 @@ export default function Dashboard() {
           </span>
           <h2 className="mt-3 text-2xl font-semibold">{nextConcept.name}</h2>
           <p className="mt-2 max-w-xl text-body">
-            This is your next concept. Read the short lesson, then a quick AI-generated
-            quiz adapts to how you answer.
+            This is your next concept. Read the short lesson, then a quick quiz — the
+            tutor tracks your mastery and adapts what comes next.
           </p>
           <div className="mt-5 flex items-center gap-4">
             <button onClick={() => openConcept(nextConcept)}
@@ -73,6 +76,41 @@ export default function Dashboard() {
           <p className="mt-2 text-body">Nothing left to unlock right now — great work!</p>
         </div>
       ) : null}
+
+      {progress && (
+        <div className="rounded-2xl border border-line bg-white p-6 shadow-card">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-600">
+              Your learner model
+            </h2>
+            <span className="font-mono text-xs text-slate-400">
+              Bayesian Knowledge Tracing · updates as you practice
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Stat label="avg mastery" value={`${avgMastery}%`} />
+            <Stat label="concepts mastered" value={`${masteredCount} / ${concepts.length}`} />
+            <Stat label="attempts tracked" value={progress.total_attempts ?? 0} />
+          </div>
+          <div className="mt-5">
+            <p className="text-sm font-medium text-ink">What the system has noticed</p>
+            {progress.recurring_difficulties?.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {progress.recurring_difficulties.map((d) => (
+                  <span key={d.label}
+                    className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                    {d.human} · {d.count}×
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-body">
+                Not enough data yet — take a few quizzes and your model fills in.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -94,6 +132,15 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="rounded-xl border border-line bg-mist/50 px-4 py-3">
+      <p className="text-2xl font-semibold text-ink">{value}</p>
+      <p className="mt-0.5 text-xs uppercase tracking-wide text-slate-500">{label}</p>
     </div>
   );
 }

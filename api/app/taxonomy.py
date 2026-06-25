@@ -26,6 +26,29 @@ MISCONCEPTION_LABELS: list[str] = [
 
 MISCONCEPTION_SET = set(MISCONCEPTION_LABELS)
 
+# Short, plain-language phrasing of each label — for showing the learner model to the
+# student ("the system has noticed you tend to…").
+MISCONCEPTION_HUMAN: dict[str, str] = {
+    "variable_name_semantics": "reading meaning into variable names",
+    "assignment_as_equality": "treating = as equality, not assignment",
+    "loop_boundary_offbyone": "off-by-one in loop bounds",
+    "loop_execution_model": "how a loop runs step by step",
+    "scope_confusion": "variable scope (local vs global)",
+    "recursion_no_base_case": "missing the recursion base case",
+    "recursion_state_confusion": "how recursive calls unwind",
+    "array_index_value_confusion": "index vs value in arrays",
+    "boolean_logic_error": "boolean and comparison logic",
+    "algorithm_sequencing_error": "the order of the steps",
+    "type_confusion": "data types (a number vs the text \"5\")",
+    "tracing_error": "hand-tracing execution line by line",
+    "conditional_flow_error": "which IF/ELSE branch runs",
+    "none": "no recurring difficulty",
+}
+
+
+def humanize(label: str | None) -> str:
+    return MISCONCEPTION_HUMAN.get(label or "none", "a recurring difficulty")
+
 
 def is_valid_label(label: str | None) -> bool:
     return label in MISCONCEPTION_SET

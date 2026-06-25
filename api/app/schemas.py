@@ -149,7 +149,16 @@ class MasteryOut(BaseModel):
     updated_at: datetime | None = None
 
 
+class DifficultyOut(BaseModel):
+    label: str          # taxonomy id, e.g. loop_boundary_offbyone
+    human: str          # plain-language phrasing
+    count: int          # how many wrong attempts the system attributed to it
+
+
 class ProgressOut(BaseModel):
     student_id: int
     mastery: list[MasteryOut]
     next_concept_slug: str | None
+    total_attempts: int = 0
+    # What the learner model (BKT + graded attempts) has noticed — the AI made visible.
+    recurring_difficulties: list[DifficultyOut] = []
