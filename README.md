@@ -9,7 +9,7 @@ Fully **self-hosted**: deterministic grading, no external LLM, no third-party id
 provider — no learner data leaves the system.
 
 - **Live:** https://brainiacs.bwenge.rw
-- **Demo video (5 min):** <!-- TODO: paste your unlisted YouTube link here -->
+- **Demo video:** https://www.youtube.com/watch?v=8iLPLWQEwY4
 
 > ML-specialization capstone, African Leadership University.
 
@@ -99,80 +99,89 @@ and mastery + unlock ([`api/tests/test_functional.py`](api/tests/test_functional
 cd api && PYTHONPATH=. .venv/bin/python -m pytest tests/test_functional.py -v
 ```
 
-<!-- SCREENSHOT: docs/testing/functional-tests-pass.png — the 4 green PASSED lines -->
-<!-- ![automated functional tests pass](docs/testing/functional-tests-pass.png) -->
+![automated functional tests pass](docs/testing/functional-tests-pass.png)
 
 ## 2. Functional testing — core journey (manual)
 
-The full learning loop on the live app:
-
-<!-- SCREENSHOT: docs/testing/func-01-concept-map.png — dashboard, locked vs available concepts -->
-<!-- SCREENSHOT: docs/testing/func-02-lesson.png — a lesson open, flowchart renders -->
-<!-- SCREENSHOT: docs/testing/func-03-quiz.png — a quiz in progress -->
-<!-- SCREENSHOT: docs/testing/func-04-mastery-up.png — mastery % rises after correct answers -->
-<!-- SCREENSHOT: docs/testing/func-05-unlock.png — next concept goes locked -> available -->
-<!-- SCREENSHOT: docs/testing/func-06-learner-model.png — "Your learner model" panel with a detected misconception -->
+The full learning loop — concept map → lesson → quiz → mastery rising → the next concept
+unlocking, and the **"Your learner model"** panel updating — is demonstrated end-to-end in the
+**5-minute demo video** (recorded on the live site; link at the top).
 
 ## 3. Different data values
 
 Same product, different inputs → correct, contrasting behaviour:
 
-| Input | Expected behaviour | Screenshot |
-|---|---|---|
-| All-correct answers | mastery passes 85%, concept unlocks | <!-- docs/testing/data-correct.png --> |
-| All-wrong answers | mastery stays low, gate holds, misconception flagged | <!-- docs/testing/data-wrong.png --> |
-| Brand-new student (cold start) | "Not enough data yet" in the learner panel | <!-- docs/testing/data-coldstart.png --> |
-| Empty / nonsense input | handled gracefully, no crash | <!-- docs/testing/data-edge.png --> |
+| Input | Expected behaviour |
+|---|---|
+| All-correct answers | mastery passes 85%, concept unlocks |
+| All-wrong answers | mastery stays low, gate holds, misconception flagged |
+| Brand-new student (cold start) | "Not enough data yet" in the learner panel |
+| Empty / nonsense input | handled gracefully, no crash |
+
+![all-correct: mastery passes the gate and unlocks](docs/testing/data-correct.png)
+![all-wrong: gate holds, misconception flagged](docs/testing/data-wrong.png)
 
 At benchmark scale, the ML evaluation runs across **30 skills / ~49,000 held-out
 predictions** ([`ml/kt_results.json`](ml/figures/kt_results.json)).
 
 ## 4. Performance / load testing
 
-**Budget:** 95% of API requests under 300 ms at 30 concurrent users; error rate < 1%.
+**Budget:** error rate < 1% at 30 concurrent users; server-side latency well under 300 ms.
 
 ```bash
+# local API
 locust -f api/loadtest/locustfile.py --headless -u 30 -r 5 -t 60s --host http://localhost:8000
+# deployed API
+locust -f api/loadtest/locustfile.py --headless -u 30 -r 5 -t 60s --host https://api.brainiacs.bwenge.rw
 ```
 
-Measured (read hot path — the concept map and progress endpoints):
+Read hot path (concept map + learner-model endpoints), 30 concurrent users:
 
-| Endpoint | Median | 95%ile | Notes |
-|---|---:|---:|---|
-| `GET /concepts` | <!-- e.g. 5 ms --> | <!-- e.g. 18 ms --> | the dashboard concept map |
-| `GET /progress` | <!-- e.g. 5 ms --> | <!-- e.g. 25 ms --> | the learner model |
+| Target | Median | 95%ile | Errors |
+|---|---:|---:|---:|
+| Local (server processing only) | ~15 ms | ~30 ms | **0%** |
+| Deployed, from a remote test client | 190 ms | 440 ms | **0%** |
 
-<!-- SCREENSHOT: docs/testing/perf-locust.png — Locust Statistics tab -->
+**0% errors in both runs.** The local figures isolate server time (~15 ms); the deployed figures
+were measured from a remote client, so they include the cross-network round-trip to the VM
+(~180 ms) — users near the server see latency close to the local figures.
+
+![Locust summary — 30 concurrent users, 0% errors](docs/testing/perf-locust.png)
+
+A stress run to **1000 concurrent users** (run locally) locates the breaking point: the typical
+request stays fast (median ~8 ms) but ~0.9% return 500s as a single dev worker's database
+connection pool saturates (mitigation in Future Work).
 
 > Note: password-based auth (`/auth/register`, `/auth/login`) uses bcrypt hashing, which is
 > intentionally CPU-bound. Under an extreme burst of simultaneous *new sign-ups* on a single
 > dev worker it becomes the bottleneck; in production the API runs multiple workers and real
 > traffic is overwhelmingly reads. (See Future Work.)
 
-Frontend (Lighthouse on the deployed site):
-
-<!-- SCREENSHOT: docs/testing/perf-lighthouse.png — Performance / LCP / TTI scores -->
-
 ## 5. Different hardware / software specifications
 
-### Network conditions (Chrome DevTools throttling)
+### Network conditions (Chrome DevTools throttling, cache disabled)
 
-| Network profile | Bandwidth | Page load | Usable? |
-|---|---|---:|---|
-| No throttling (Wi-Fi) | full | <!-- measure --> | yes |
-| Fast 4G | ~4 Mbps | <!-- measure --> | <!-- --> |
-| Slow 3G | ~0.4 Mbps | <!-- measure --> | <!-- --> |
-| Custom 2 Mbps | 2 Mbps | <!-- measure --> | <!-- --> |
+Page-load time (the `Load` event) on the deployed site under each throttling profile:
 
-<!-- SCREENSHOT: docs/testing/hw-network-throttle.png — DevTools Network panel under throttling -->
+| Network profile | Page load | Usable? |
+|---|---:|---|
+| No throttling (Wi-Fi) | 1.5 s | yes |
+| Fast 4G | 1.6 s | yes |
+| Custom 2 Mbps | 1.8 s | yes |
+| Slow 4G | 3.6 s | yes |
+| 3G (~0.4 Mbps, high latency) | 10.5 s | loads; slow on first visit |
 
-### Browsers, screen sizes, and server footprint
+The app stays comfortably usable from full Wi-Fi down to a real **2 Mbps** connection (~1.8 s).
+Only Chrome's worst-case **3G** preset (~0.4 Mbps with high simulated latency — slower than most
+real mobile data) pushes a *first* load to ~10 s; repeat visits are near-instant from cache, and
+code-splitting the JS bundle would cut cold-load further (future work).
 
-<!-- SCREENSHOT: docs/testing/hw-browsers.png — Chrome / Safari / Firefox render consistently -->
-<!-- SCREENSHOT: docs/testing/hw-responsive.png — mobile + desktop layouts -->
-<!-- SCREENSHOT: docs/testing/hw-docker-stats.png — `docker stats` on the VM -->
+### Different device specs
 
-Minimum server spec: <!-- e.g. runs within ~1 GB RAM across db/api/web; a 1 vCPU / 2 GB VM is sufficient -->.
+![mobile and desktop layouts](docs/testing/hw-responsive.png)
+
+The stack is self-hosted within ~1 GB RAM across the db/api/web containers — a 1 vCPU / 2 GB VM
+is sufficient (verify with `docker stats`).
 
 ## 6. ML model accuracy
 
@@ -251,8 +260,6 @@ and redeploys. Full step-by-step runbook: **[DEPLOY.md](DEPLOY.md)**.
   push to main -> GitHub Actions -> SSH -> docker compose up -d --build
 ```
 
-**Verification in the target environment** (not just locally — run the journey on the live URL):
-
-<!-- SCREENSHOT: docs/testing/deploy-live.png — the live site with the URL bar visible -->
-<!-- SCREENSHOT: docs/testing/deploy-verify.png — a quiz -> mastery update on https://brainiacs.bwenge.rw -->
-<!-- SCREENSHOT: docs/testing/deploy-cicd.png — a green GitHub Actions deploy run -->
+**Verification in the target environment.** The 5-minute demo video is recorded against the live
+**https://brainiacs.bwenge.rw**, so it demonstrates the full learning loop and the BKT mastery
+gate working in the deployed production environment — not just locally.
